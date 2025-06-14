@@ -41,15 +41,10 @@ public class CodeAnalysisService {
             final String diffContent) {
         try {
             if (pullRequestId == null || filePath == null || diffContent == null) {
-                throw new IllegalArgumentException("Input parameters cannot be null!");
+                throw new IllegalArgumentException("Input parameters cannot be null");
             }
 
-            List<String> chunks = new ArrayList<>();
-            for (int i = 0; i < diffContent.length(); i += CHUNK_SIZE) {
-                String chunk = diffContent.substring(i, Math.min(i + CHUNK_SIZE, diffContent.length()));
-                chunk = chunk.length() > CHUNK_SIZE ? chunk.substring(0, CHUNK_SIZE) : chunk;
-                chunks.add(chunk);
-            }
+            List<String> chunks = this.chunkItUp(diffContent);
             log.info("Split diffContent for PR {} into {} chunks", pullRequestId, chunks.size());
 
             List<String> feedbacks = chunks.stream()
@@ -86,6 +81,15 @@ public class CodeAnalysisService {
         }
     }
 
+    private List<String> chunkItUp(final String diffContent) {
+        List<String> chunks = new ArrayList<>();
+        for (int i = 0; i < diffContent.length(); i += CHUNK_SIZE) {
+                String chunk = diffContent.substring(i, Math.min(i + CHUNK_SIZE, diffContent.length()));
+                chunk = chunk.length() > CHUNK_SIZE ? chunk.substring(0, CHUNK_SIZE) : chunk;
+                chunks.add(chunk);
+            }
+            return chunks;
+    }
     private String parseAiResponse(final String rawResponse) {
         try {
             final List<List<Double>> embeddings = objectMapper.readValue(rawResponse,
