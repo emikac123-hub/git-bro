@@ -7,7 +7,6 @@ import java.nio.file.StandardOpenOption;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 import java.util.stream.Collectors;
@@ -38,6 +37,7 @@ public class CodeAnalysisService {
     private static final int CHUNK_SIZE = 200;
     private static final int freeTierAPILimit = 20;
 
+    private static final String NO_ISSUES = "No issues detected.";
     @Async("virtualThreadExecutor")
     public CompletableFuture<Object> analyzeDiff(final String pullRequestId, final String filePath,
             final String diffContent) {
@@ -69,7 +69,7 @@ public class CodeAnalysisService {
                             return "Error analyzing chunk";
                         }
                     })
-                    .filter(fb -> !fb.equals("Nothing significant found"))
+                    .filter(fb -> !fb.equals("Nothing significant issues found") && !fb.equals(NO_ISSUES))
                     .distinct()
                     .collect(Collectors.toList());
             // Aggregate feedback
@@ -133,7 +133,7 @@ public class CodeAnalysisService {
             if (embeddings.size() > 1 && vectorMeans.get(1) > 0.05) {
                 issues.add("Style violation detected.");
             }
-            return issues.isEmpty() ? "No Issues detects" : String.join("; ", issues);
+            return issues.isEmpty() ? NO_ISSUES : String.join("; ", issues);
         } catch (JsonProcessingException e) {
             log.error("Failed to parse CodeBERT response: {}", e.getMessage());
             return "Error analyzing code: Unable to parse AI response";
