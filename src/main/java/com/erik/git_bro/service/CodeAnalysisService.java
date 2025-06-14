@@ -9,40 +9,45 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 
-import com.erik.git_bro.client.CodeBertClient;
+import com.erik.git_bro.ai.CodeAnalyzer;
 import com.erik.git_bro.model.Review;
 import com.erik.git_bro.repository.ReviewRepository;
 import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
-import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 
 @Service
-@RequiredArgsConstructor
+
 @Slf4j
 public class CodeAnalysisService {
     @Value("${app.feedback.file-path}")
     private String feedbackFilePath;
-    private final CodeBertClient codeBertClient;
     private final ReviewRepository reviewRepository;
+    private final CodeAnalyzer analyzer;
     private final ObjectMapper objectMapper = new ObjectMapper();
     private static final int CHUNK_SIZE = 200;
     private static final int freeTierAPILimit = 20;
 
-    private static final String NO_ISSUES = "No issues detected.";
+    public CodeAnalysisService(@Qualifier("codeAnalyzer") CodeAnalyzer analyzer, ReviewRepository reviewRepository) {
+        this.analyzer = analyzer;
+        this.reviewRepository = reviewRepository;
+    }
+
     @Async("virtualThreadExecutor")
-    public CompletableFuture<Object> analyzeDiff(final String pullRequestId, final String filePath,
+    public CompletableFuture<Object> analyzeDiff(final String pullRequestId,
             final String diffContent) {
         try {
-            if (pullRequestId == null || filePath == null || diffContent == null) {
+            if (pullRequestId == null || diffContent == null) {
                 throw new IllegalArgumentException("Input parameters cannot be null");
             }
 
@@ -60,16 +65,19 @@ public class CodeAnalysisService {
                     .map(chunk -> {
 
                         try {
-                   
-                            System.out.println(chunk);
-                            final String feedback = codeBertClient.analyzeCode(chunk);
-                            return parseAiResponse(feedback);
+                            final String feedback = analyzer.analyzeCode(chunk);
+                            return analyzer.parseAiResponse(feedback);
                         } catch (final IOException e) {
                             log.error("Failed to process chunk for PR {}: {}.", pullRequestId, e.getMessage());
                             return "Error analyzing chunk";
+                        } catch (Exception e) {
+
+                            log.error("An Unknown Exception occured for PR {}: {}.", pullRequestId, e.getMessage());
+                            return "Uknown Exception analyzing chunk";
                         }
+
                     })
-                    .filter(fb -> !fb.equals("Nothing significant issues found") && !fb.equals(NO_ISSUES))
+                    .filter(fb -> !fb.equals("Nothing significant issues found") && !fb.equals(CodeAnalyzer.NO_ISSUES))
                     .distinct()
                     .collect(Collectors.toList());
             // Aggregate feedback
@@ -80,7 +88,7 @@ public class CodeAnalysisService {
             Review review = new Review();
             review.setReviewId(UUID.randomUUID().toString());
             review.setPullRequestId(pullRequestId);
-            review.setFilePath(filePath);
+            review.setFilePath(this.extractFilePathFromDiff(diffContent));
             review.setDiffContent(diffContent);
             review.setFeedback(feedback);
             review.setCreatedAt(Instant.now().toString());
@@ -96,52 +104,17 @@ public class CodeAnalysisService {
         for (int i = 0; i < diffContent.length(); i += CHUNK_SIZE) {
             String chunk = diffContent.substring(i, Math.min(i + CHUNK_SIZE, diffContent.length()));
             chunk = chunk.length() > CHUNK_SIZE ? chunk.substring(0, CHUNK_SIZE) : chunk;
-            String escapedChunk = objectMapper.writeValueAsString(chunk); 
+            String escapedChunk = objectMapper.writeValueAsString(chunk);
             log.debug("json payload: {}", escapedChunk);
             chunks.add(cleanChunk(escapedChunk));
         }
         return chunks;
     }
 
-    private String parseAiResponse(final String rawResponse) {
-        try {
-            final List<List<Double>> embeddings = objectMapper.readValue(rawResponse,
-                    new TypeReference<List<List<Double>>>() {
-                    });
-
-            log.info("Parsed {} embedding vectors, each with {} dimensions",
-                    embeddings.size(), embeddings.isEmpty() ? 0 : embeddings.get(0).size());
-            // Compute mean of each vector for simple analysis
-            List<Double> vectorMeans = embeddings.stream()
-                    .map(vector -> vector.stream()
-                            .mapToDouble(Double::doubleValue)
-                            .average()
-                            .orElse(0.0))
-                    .collect(Collectors.toList());
-
-            // Simple heuristic: high mean in any vector suggests an issue
-
-            double maxMean = vectorMeans.stream()
-                    .mapToDouble(Double::doubleValue)
-                    .max()
-                    .orElse(0.0);
-            List<String> issues = new ArrayList<>();
-
-            if (maxMean > 0.1) {
-                issues.add("Possible null pointer exception.");
-            }
-            if (embeddings.size() > 1 && vectorMeans.get(1) > 0.05) {
-                issues.add("Style violation detected.");
-            }
-            return issues.isEmpty() ? NO_ISSUES : String.join("; ", issues);
-        } catch (JsonProcessingException e) {
-            log.error("Failed to parse CodeBERT response: {}", e.getMessage());
-            return "Error analyzing code: Unable to parse AI response";
-        } catch (Exception e) {
-            log.error("Unexpected error parsing CodeBERT response: {}", e.getMessage());
-            return "Error analyzing code: Unexpected issue.";
-        }
-
+    private String extractFilePathFromDiff(String diffContent) {
+        Pattern pattern = Pattern.compile("^\\+\\+\\+ b/(.+)$", Pattern.MULTILINE);
+        Matcher matcher = pattern.matcher(diffContent);
+        return matcher.find() ? matcher.group(1) : "unknown";
     }
 
     private CompletableFuture<Void> writeFeedbackToFile(String pullRequestId, String feedback) {
@@ -158,6 +131,21 @@ public class CodeAnalysisService {
                 // Don't throw; file writing is non-critical
             }
         });
+    }
+
+    // TODO - Eventually, chunk by file. Right now, I can't do that because I am on
+    // the free version.
+    private List<String> chunkByFile(String diffContent) {
+        List<String> fileChunks = new ArrayList<>();
+
+        String[] parts = diffContent.split("(?=^diff --git )", -1);
+        for (String part : parts) {
+            if (part.strip().isEmpty())
+                continue; // skip empty entries
+            fileChunks.add(part.strip());
+        }
+
+        return fileChunks;
     }
 
     private String cleanChunk(String chunk) {

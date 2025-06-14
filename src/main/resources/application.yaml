@@ -26,6 +26,7 @@ huggingface:
     token: ${HUGGINGFACE_API_TOKEN}
 
 app:
+  ai-provider: codebert
   feedback:
     file-path: ${FEEDBACK_FILE_PATH:/Users/erikmikac/code-review-feedback.txt}
 server:

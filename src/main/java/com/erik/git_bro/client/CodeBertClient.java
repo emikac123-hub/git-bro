@@ -18,11 +18,15 @@ import okhttp3.Response;
 
 @Component
 @Slf4j
-public class CodeBertClient {
+public class CodeBertClient  {
     @Value("${huggingface.api.token}")
     private String huggingfaceToken;
     private final OkHttpClient client = new OkHttpClient();
+
+
     private static final String API_URL = "https://api-inference.huggingface.co/models/microsoft/codebert-base";
+ 
+
 
     public String analyzeCode(String codeSnippet) throws IOException {
         Map<String, String> payloadMap = Map.of("inputs", codeSnippet);
@@ -37,6 +41,7 @@ public class CodeBertClient {
                 .post(body)
                 .build();
 
+        log.info("Here is the Request: {}", request.body());
         try (Response response = client.newCall(request).execute()) {
             if (!response.isSuccessful()) {
                 String errorBody = response.body() != null ? response.body().string() : "No response body";
@@ -48,6 +53,7 @@ public class CodeBertClient {
             return responseBody;
         }
     }
+
 
     @PostConstruct
     public void init() {

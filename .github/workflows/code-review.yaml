@@ -46,9 +46,6 @@ jobs:
                       -H "Content-Type: application/json" \
                       --data-binary @pr.diff
                 )
-                echo "Response..."
-                echo "$response" | jq
-                echo "AGAIN...."
                 echo "feedback=$(echo "$response" | jq -r '.feedback')" >> "$GITHUB_OUTPUT"
 
             - name: Post AI Feedback as Comment

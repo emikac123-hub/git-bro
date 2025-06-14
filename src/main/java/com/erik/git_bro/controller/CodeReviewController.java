@@ -26,11 +26,10 @@ public class CodeReviewController {
     @PostMapping("/analyze")
     public CompletableFuture<ResponseEntity<Object>> analyzeCode(
             @RequestParam String pullRequestId,
-            @RequestParam String filePath,
             @RequestBody String diffContent) {
-        log.info("Received review request for PR {} and file {}. Diff length: {}", pullRequestId, filePath,
+        log.info("Received review request for PR {}. Diff length: {}", pullRequestId,
                 diffContent.length());
-        return codeAnalysisService.analyzeDiff(pullRequestId, filePath, diffContent)
+        return codeAnalysisService.analyzeDiff(pullRequestId,  diffContent)
                 .thenApply(review -> ResponseEntity.ok(review))
                 .exceptionally(throwable -> {
                     Throwable cause = throwable.getCause() != null ? throwable.getCause() : throwable;
