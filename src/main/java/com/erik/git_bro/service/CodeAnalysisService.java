@@ -46,9 +46,10 @@ public class CodeAnalysisService {
 
             List<String> chunks = this.chunkItUp(diffContent);
             if(chunks.size() > freeTierAPILimit) {
-                final var overFlow = chunks.size() - freeTierAPILimit;
+                int overFlow = chunks.size() - freeTierAPILimit;
                 while(overFlow > 0) {
                     chunks.removeLast();
+                    --overFlow;
                 }
             }
             log.info("Split diffContent for PR {} into {} chunks", pullRequestId, chunks.size());
