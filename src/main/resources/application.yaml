@@ -1,0 +1,17 @@
+spring:
+  config:
+    import: "optional:classpath:application-secrets.yaml"
+  application:
+    name: git-bro
+  security:
+    user:
+      name: user
+      password: password
+
+huggingface:
+  api:
+    token: ${HUGGINGFACE_API_TOKEN}
+
+app:
+  feedback:
+    file-path: ${FEEDBACK_FILE_PATH:/Users/erikmikac/code-review-feedback.txt}
