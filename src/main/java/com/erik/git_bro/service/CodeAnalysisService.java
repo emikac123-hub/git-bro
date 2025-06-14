@@ -40,7 +40,7 @@ public class CodeAnalysisService {
             final String diffContent) {
         try {
             if (pullRequestId == null || filePath == null || diffContent == null) {
-                throw new IllegalArgumentException("Input parameters cannot be null");
+                throw new IllegalArgumentException("Input parameters cannot be null!");
             }
 
             String feedback = codeBertClient.analyzeCode(diffContent);
