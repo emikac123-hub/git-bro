@@ -34,6 +34,7 @@ public class CodeAnalysisService {
     private final CodeBertClient codeBertClient;
     private final ReviewRepository reviewRepository;
     private final ObjectMapper objectMapper = new ObjectMapper();
+    private static final int CHUNK_SIZE = 1000;
 
     @Async("virtualThreadExecutor")
     public CompletableFuture<Object> analyzeDiff(final String pullRequestId, final String filePath,
@@ -43,12 +44,34 @@ public class CodeAnalysisService {
                 throw new IllegalArgumentException("Input parameters cannot be null!");
             }
 
-            String feedback = codeBertClient.analyzeCode(diffContent);
+            List<String> chunks = new ArrayList<>();
+            for (int i = 0; i < diffContent.length(); i += CHUNK_SIZE) {
+                String chunk = diffContent.substring(i, Math.min(i + CHUNK_SIZE, diffContent.length()));
+                chunk = chunk.length() > CHUNK_SIZE ? chunk.substring(0, CHUNK_SIZE) : chunk;
+                chunks.add(chunk);
+            }
+            log.info("Split diffContent for PR {} into {} chunks", pullRequestId, chunks.size());
+
+            List<String> feedbacks = chunks.stream()
+                    .map(chunk -> {
+
+                        try {
+                            System.out.println(chunk);
+                            final String feedback = codeBertClient.analyzeCode(chunk);
+                            return parseAiResponse(feedback);
+                        } catch (final IOException e) {
+                            log.error("Failed to process chunk for PR {}: {}", pullRequestId, e.getMessage());
+                            return "Error analyzing chunk";
+                        }
+                    })
+                    .filter(fb -> !fb.equals("Nothing significant found"))
+                    .distinct()
+                    .collect(Collectors.toList());
+            // Aggregate feedback
+            String feedback = feedbacks.isEmpty() ? "No significant issues detected" : String.join("; ", feedbacks);
             writeFeedbackToFile(pullRequestId, feedback);
             log.info("The Actual Feedback");
             log.info(feedback);
-            feedback = parseAiResponse(feedback);
-
             Review review = new Review();
             review.setReviewId(UUID.randomUUID().toString());
             review.setPullRequestId(pullRequestId);
@@ -70,7 +93,7 @@ public class CodeAnalysisService {
                     });
 
             log.info("Parsed {} embedding vectors, each with {} dimensions",
-            embeddings.size(), embeddings.isEmpty() ? 0 : embeddings.get(0).size());
+                    embeddings.size(), embeddings.isEmpty() ? 0 : embeddings.get(0).size());
             // Compute mean of each vector for simple analysis
             List<Double> vectorMeans = embeddings.stream()
                     .map(vector -> vector.stream()
@@ -78,7 +101,7 @@ public class CodeAnalysisService {
                             .average()
                             .orElse(0.0))
                     .collect(Collectors.toList());
-                    
+
             // Simple heuristic: high mean in any vector suggests an issue
 
             double maxMean = vectorMeans.stream()
@@ -87,8 +110,7 @@ public class CodeAnalysisService {
                     .orElse(0.0);
             List<String> issues = new ArrayList<>();
 
-
-            if (vectorMeans.get(0) > 0.1) {
+            if (maxMean > 0.1) {
                 issues.add("Possible null pointer exception.");
             }
             if (embeddings.size() > 1 && vectorMeans.get(1) > 0.05) {
