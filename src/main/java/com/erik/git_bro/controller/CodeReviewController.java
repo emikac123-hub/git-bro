@@ -28,10 +28,10 @@ public class CodeReviewController {
             @RequestParam String pullRequestId,
             @RequestParam String filePath,
             @RequestBody String diffContent) {
+        log.info("Received review request for PR {} and file {}. Diff length: {}", pullRequestId, filePath,
+                diffContent.length());
         return codeAnalysisService.analyzeDiff(pullRequestId, filePath, diffContent)
-                .thenApply(review ->
-
-                ResponseEntity.ok(review))
+                .thenApply(review -> ResponseEntity.ok(review))
                 .exceptionally(throwable -> {
                     Throwable cause = throwable.getCause() != null ? throwable.getCause() : throwable;
                     // Replace with SLF4J logging in production
