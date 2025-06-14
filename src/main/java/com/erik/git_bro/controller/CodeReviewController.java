@@ -30,6 +30,7 @@ public class CodeReviewController {
             @RequestBody String diffContent) {
         log.info("Received review request for PR {} and file {}. Diff length: {}", pullRequestId, filePath,
                 diffContent.length());
+                diffContent = "public class Main { public void test() { String s = null; s.length();";
         return codeAnalysisService.analyzeDiff(pullRequestId, filePath, diffContent)
                 .thenApply(review -> ResponseEntity.ok(review))
                 .exceptionally(throwable -> {
