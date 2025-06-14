@@ -35,7 +35,7 @@ public class CodeAnalysisService {
     private final CodeBertClient codeBertClient;
     private final ReviewRepository reviewRepository;
     private final ObjectMapper objectMapper = new ObjectMapper();
-    private static final int CHUNK_SIZE = 100;
+    private static final int CHUNK_SIZE = 200;
     private static final int freeTierAPILimit = 20;
 
     @Async("virtualThreadExecutor")
