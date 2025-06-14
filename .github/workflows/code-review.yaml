@@ -43,7 +43,7 @@ jobs:
                 response=$(
                   curl -s -v -u user:password -X POST \
                       "$API_URL?pullRequestId=${{ github.event.pull_request.number }}&filePath=src/Main.java" \
-                      -H "Content-Type: text/plain" \
+                      -H "Content-Type: application/json" \
                       --data-binary @pr.diff
                 )
                 echo "Response..."

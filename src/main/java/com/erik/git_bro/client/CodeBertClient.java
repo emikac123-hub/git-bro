@@ -1,9 +1,12 @@
 package com.erik.git_bro.client;
 
 import java.io.IOException;
+import java.util.Map;
 
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
+
+import com.fasterxml.jackson.databind.ObjectMapper;
 
 import jakarta.annotation.PostConstruct;
 import lombok.extern.slf4j.Slf4j;
@@ -22,8 +25,10 @@ public class CodeBertClient {
     private static final String API_URL = "https://api-inference.huggingface.co/models/microsoft/codebert-base";
 
     public String analyzeCode(String codeSnippet) throws IOException {
+        Map<String, String> payloadMap = Map.of("inputs", codeSnippet);
+        String jsonPayload = new ObjectMapper().writeValueAsString(payloadMap);
         final var body = RequestBody.create(
-                "{\"inputs\": \"" + codeSnippet + "\"}",
+                jsonPayload,
                 MediaType.parse("application/json"));
 
         final Request request = new Request.Builder()

@@ -7,6 +7,7 @@ import java.nio.file.StandardOpenOption;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 import java.util.stream.Collectors;
@@ -36,6 +37,7 @@ public class CodeAnalysisService {
     private final ObjectMapper objectMapper = new ObjectMapper();
     private static final int CHUNK_SIZE = 100;
     private static final int freeTierAPILimit = 20;
+
     @Async("virtualThreadExecutor")
     public CompletableFuture<Object> analyzeDiff(final String pullRequestId, final String filePath,
             final String diffContent) {
@@ -45,9 +47,9 @@ public class CodeAnalysisService {
             }
 
             List<String> chunks = this.chunkItUp(diffContent);
-            if(chunks.size() > freeTierAPILimit) {
+            if (chunks.size() > freeTierAPILimit) {
                 int overFlow = chunks.size() - freeTierAPILimit;
-                while(overFlow > 0) {
+                while (overFlow > 0) {
                     chunks.removeLast();
                     --overFlow;
                 }
@@ -58,11 +60,12 @@ public class CodeAnalysisService {
                     .map(chunk -> {
 
                         try {
+                   
                             System.out.println(chunk);
                             final String feedback = codeBertClient.analyzeCode(chunk);
                             return parseAiResponse(feedback);
                         } catch (final IOException e) {
-                            log.error("Failed to process chunk for PR {}: {}", pullRequestId, e.getMessage());
+                            log.error("Failed to process chunk for PR {}: {}.", pullRequestId, e.getMessage());
                             return "Error analyzing chunk";
                         }
                     })
@@ -88,12 +91,14 @@ public class CodeAnalysisService {
         }
     }
 
-    private List<String> chunkItUp(final String diffContent) {
+    private List<String> chunkItUp(final String diffContent) throws JsonProcessingException {
         List<String> chunks = new ArrayList<>();
         for (int i = 0; i < diffContent.length(); i += CHUNK_SIZE) {
             String chunk = diffContent.substring(i, Math.min(i + CHUNK_SIZE, diffContent.length()));
             chunk = chunk.length() > CHUNK_SIZE ? chunk.substring(0, CHUNK_SIZE) : chunk;
-            chunks.add(chunk);
+            String escapedChunk = objectMapper.writeValueAsString(chunk); 
+            log.debug("json payload: {}", escapedChunk);
+            chunks.add(cleanChunk(escapedChunk));
         }
         return chunks;
     }
@@ -153,6 +158,10 @@ public class CodeAnalysisService {
                 // Don't throw; file writing is non-critical
             }
         });
+    }
+
+    private String cleanChunk(String chunk) {
+        return chunk.replaceAll("[\\p{Cntrl}&&[^\r\n\t]]", ""); // Remove illegal control characters
     }
 
 }
