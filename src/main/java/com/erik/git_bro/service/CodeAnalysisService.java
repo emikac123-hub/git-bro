@@ -89,7 +89,7 @@ public class CodeAnalysisService {
 
 
             if (vectorMeans.get(0) > 0.1) {
-                issues.add("Possible null pointer exception");
+                issues.add("Possible null pointer exception.");
             }
             if (embeddings.size() > 1 && vectorMeans.get(1) > 0.05) {
                 issues.add("Style violation detected.");
