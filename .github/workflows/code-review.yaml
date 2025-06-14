@@ -9,10 +9,7 @@ jobs:
             # Check out the repo to access the PR diff
             - name: Checkout code
               uses: actions/checkout@v4
-            - name: Echo PR Diff
-              run: |
-                echo "Base64-encoded diff:"
-                cat pr.diff | base64 -w 0
+
             - name: Get PR Diff
               id: get-diff
               run: |
@@ -20,7 +17,9 @@ jobs:
                     -H "Accept: application/vnd.github.v3.diff" \
                     https://api.github.com/repos/emikac123-hub/git-bro/pulls/${{ github.event.pull_request.number }} \
                     > pr.diff
-
+                              run: |
+                echo "Base64-encoded diff:"
+                cat pr.diff | base64 -w 0
                 echo "Encoding diff..."
                 encoded_diff=$(base64 -w 0 pr.diff)
 
