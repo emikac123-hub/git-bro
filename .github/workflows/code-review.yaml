@@ -9,7 +9,6 @@ jobs:
             # Check out the repo to access the PR diff
             - name: Checkout code
               uses: actions/checkout@v4
-
             - name: Get PR Diff
               id: get-diff
               run: |
