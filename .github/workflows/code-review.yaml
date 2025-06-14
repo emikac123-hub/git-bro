@@ -41,7 +41,7 @@ jobs:
                 echo "Decoded diff:"
                 echo "$(echo ${{ steps.get-diff.outputs.diff_content }} | base64 -d)"
                 response=$(
-                  curl -s -v -X POST \
+                  curl -s -v -u user:password -X POST \
                       "$API_URL?pullRequestId=${{ github.event.pull_request.number }}&filePath=src/Main.java" \
                       -H "Content-Type: text/plain" \
                       --data-binary @pr.diff
