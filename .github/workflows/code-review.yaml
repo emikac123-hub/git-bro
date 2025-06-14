@@ -34,7 +34,6 @@ jobs:
             - name: Call Code Review API
               id: call-api
               env:
-                # ⚠️ Remove the trailing dot here
                 API_URL: https://1fe1-149-154-20-92.ngrok-free.app/api/review/analyze
                 HUGGINGFACE_API_TOKEN: ${{ secrets.HUGGINGFACE_API_TOKEN }}
               run: |
@@ -42,7 +41,7 @@ jobs:
                 echo "Decoded diff:"
                 echo "$(echo ${{ steps.get-diff.outputs.diff_content }} | base64 -d)"
                 response=$(
-                  curl -s -X POST \
+                  curl -s -v -X POST \
                       "$API_URL?pullRequestId=${{ github.event.pull_request.number }}&filePath=src/Main.java" \
                       -H "Content-Type: text/plain" \
                       --data-binary @pr.diff
