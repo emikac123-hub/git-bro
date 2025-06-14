@@ -1,0 +1,45 @@
+name: Ai Code Review Assistant
+on:
+    pull_request:
+        types: [opened, synchronize, reopened]
+jobs:
+    code-review:
+        runs-on: ubuntu-latest
+        steps:
+            # Check out the repo to access the PR diff
+            - name: Checkout code
+              uses: actions/checkout@v4
+            - name: Get PR Diff
+              id: get-diff
+              run: |
+                run: |
+                        curl -s -H "Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" \
+                            -H "Accept: application/vnd.github.v3.diff" \
+                            https://api.github.com/repos/${{ github.repository }}/pulls/${{ github.event.pull_request.number }} \
+                            > pr.diff
+                        echo "diff_content=$(cat pr.diff | base64)" >> $GITHUB_OUTPUT
+            # Call the Code Review Assistant API
+            - name: Call Code Review API
+              id: call-api
+              env:
+                API_URL: https://*.ngrok.io/api/review/analyze. # TODO: Replace with an actual url.
+              run:  |
+                response=$(curl -s -X POST "$API_URL?pullRequestId=${{ github.event.pull_request.number }}&filePath=src/Main.java" \
+                                -H "Content-Type: text/plain" \
+                                -d "$(echo ${{ steps.get-diff.outputs.diff_content }} | base64 -d)")
+                echo "feedback=$(echo $response | jq -r '.feedback')" >> $GITHUB_OUTPUT
+            - name: Post PR Comment
+              uses: actions/github-script@7
+              with:
+                github-tokens: ${{ secrets.GITHUB_TOKEN }}
+                script: |
+                        const feedback = `${{ steps.call-api.outputs.feedback }}`;
+                        await github.rest.issues.createComment({
+                        owner: context.repo.owner,
+                        repo: context.repo.repo,
+                        issue_number: context.issue.number,
+                        body: `AI Code Review: ${feedback}`
+                        });
+
+                    
+        
