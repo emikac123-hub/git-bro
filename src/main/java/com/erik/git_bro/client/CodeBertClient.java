@@ -6,6 +6,7 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
 import jakarta.annotation.PostConstruct;
+import lombok.extern.slf4j.Slf4j;
 import okhttp3.MediaType;
 import okhttp3.OkHttpClient;
 import okhttp3.Request;
@@ -13,6 +14,7 @@ import okhttp3.RequestBody;
 import okhttp3.Response;
 
 @Component
+@Slf4j
 public class CodeBertClient {
     @Value("${huggingface.api.token}")
     private String huggingfaceToken;
@@ -32,9 +34,13 @@ public class CodeBertClient {
 
         try (Response response = client.newCall(request).execute()) {
             if (!response.isSuccessful()) {
-                throw new IOException("Unexpected code: " + response);
+                String errorBody = response.body() != null ? response.body().string() : "No response body";
+                log.error("CodeBERT API request failed with code {}: {}", response.code(), errorBody);
+                throw new IOException("API request failed with code " + response.code() + ": " + errorBody);
             }
-            return response.body().string();
+            String responseBody = response.body().string();
+            log.debug("Received CodeBERT response, size: {} characters", responseBody.length());
+            return responseBody;
         }
     }
 

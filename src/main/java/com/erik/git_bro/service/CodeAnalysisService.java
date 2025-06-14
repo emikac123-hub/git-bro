@@ -34,8 +34,8 @@ public class CodeAnalysisService {
     private final CodeBertClient codeBertClient;
     private final ReviewRepository reviewRepository;
     private final ObjectMapper objectMapper = new ObjectMapper();
-    private static final int CHUNK_SIZE = 500;
-
+    private static final int CHUNK_SIZE = 100;
+    private static final int freeTierAPILimit = 20;
     @Async("virtualThreadExecutor")
     public CompletableFuture<Object> analyzeDiff(final String pullRequestId, final String filePath,
             final String diffContent) {
@@ -45,6 +45,12 @@ public class CodeAnalysisService {
             }
 
             List<String> chunks = this.chunkItUp(diffContent);
+            if(chunks.size() > freeTierAPILimit) {
+                final var overFlow = chunks.size() - freeTierAPILimit;
+                while(overFlow > 0) {
+                    chunks.removeLast();
+                }
+            }
             log.info("Split diffContent for PR {} into {} chunks", pullRequestId, chunks.size());
 
             List<String> feedbacks = chunks.stream()
@@ -84,12 +90,13 @@ public class CodeAnalysisService {
     private List<String> chunkItUp(final String diffContent) {
         List<String> chunks = new ArrayList<>();
         for (int i = 0; i < diffContent.length(); i += CHUNK_SIZE) {
-                String chunk = diffContent.substring(i, Math.min(i + CHUNK_SIZE, diffContent.length()));
-                chunk = chunk.length() > CHUNK_SIZE ? chunk.substring(0, CHUNK_SIZE) : chunk;
-                chunks.add(chunk);
-            }
-            return chunks;
+            String chunk = diffContent.substring(i, Math.min(i + CHUNK_SIZE, diffContent.length()));
+            chunk = chunk.length() > CHUNK_SIZE ? chunk.substring(0, CHUNK_SIZE) : chunk;
+            chunks.add(chunk);
+        }
+        return chunks;
     }
+
     private String parseAiResponse(final String rawResponse) {
         try {
             final List<List<Double>> embeddings = objectMapper.readValue(rawResponse,
