@@ -34,7 +34,7 @@ public class CodeAnalysisService {
     private final CodeBertClient codeBertClient;
     private final ReviewRepository reviewRepository;
     private final ObjectMapper objectMapper = new ObjectMapper();
-    private static final int CHUNK_SIZE = 1000;
+    private static final int CHUNK_SIZE = 500;
 
     @Async("virtualThreadExecutor")
     public CompletableFuture<Object> analyzeDiff(final String pullRequestId, final String filePath,
