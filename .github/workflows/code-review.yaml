@@ -10,19 +10,17 @@ jobs:
             - name: Checkout code
               uses: actions/checkout@v4
             - name: Get PR Diff
-              id: get-diff
               run: |
                 curl -s -H "Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" \
                     -H "Accept: application/vnd.github.v3.diff" \
-                    https://api.github.com/repos/emikac123-hub/git-bro/pulls/${{ github.event.pull_request.number }} \
+                    https://api.github.com/repos/${{ github.repository }}/pulls/${{ github.event.pull_request.number }} \
                     > pr.diff
-                              run: |
-                echo "Base64-encoded diff:"
-                cat pr.diff | base64 -w 0
-                echo "Encoding diff..."
-                encoded_diff=$(base64 -w 0 pr.diff)
 
-                echo "diff_content=$encoded_diff" >> "$GITHUB_OUTPUT"
+            - name: Upload PR Diff Artifact
+              uses: actions/upload-artifact@v4
+              with:
+                name: pr-diff
+                path: pr.diff
 
             - name: Debug API Response
               id: debug-request
