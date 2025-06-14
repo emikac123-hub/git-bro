@@ -21,19 +21,11 @@ jobs:
               with:
                 name: pr-diff
                 path: pr.diff
-
-            - name: Debug API Response
-              id: debug-request
-              run: |
-                    curl -s -H "Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" \
-                        -H "Accept: application/vnd.github.v3.diff" \
-                        https://api.github.com/repos/emikac123-hub/git-bro/pulls/2 \
-                        | head -n 10
             # Call the Code Review Assistant API
             - name: Call Code Review API
               id: call-api
               env:
-                API_URL: https://*.ngrok.io/api/review/analyze. # TODO: Replace with an actual url.
+                API_URL: https://1fe1-149-154-20-92.ngrok-free.app/api/review/analyze. # TODO: Replace with an actual url.
                 HUGGINGFACE_API_TOKEN: ${{ secrets.HUGGINGFACE_API_TOKEN }}
               run:  |
                 response=$(curl -s -X POST "$API_URL?pullRequestId=${{ github.event.pull_request.number }}&filePath=src/Main.java" \
