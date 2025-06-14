@@ -92,7 +92,7 @@ public class CodeAnalysisService {
                 issues.add("Possible null pointer exception");
             }
             if (embeddings.size() > 1 && vectorMeans.get(1) > 0.05) {
-                issues.add("Style violation detected");
+                issues.add("Style violation detected.");
             }
             return issues.isEmpty() ? "No Issues detects" : String.join("; ", issues);
         } catch (JsonProcessingException e) {
