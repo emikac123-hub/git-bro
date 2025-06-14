@@ -13,11 +13,19 @@ jobs:
             - name: Checkout code
               uses: actions/checkout@v4
             - name: Get PR Diff
+              id: get-diff
               run: |
                 curl -s -H "Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" \
                     -H "Accept: application/vnd.github.v3.diff" \
                     https://api.github.com/repos/${{ github.repository }}/pulls/${{ github.event.pull_request.number }} \
-                    > pr.diff
+                    -o pr.diff
+
+                echo "=== DIFF CONTENT ==="
+                cat pr.diff
+
+                diff_base64=$(base64 < pr.diff | tr -d '\n')
+                echo "diff_content=$diff_base64" >> "$GITHUB_OUTPUT"
+
 
             - name: Upload PR Diff Artifact
               uses: actions/upload-artifact@v4
