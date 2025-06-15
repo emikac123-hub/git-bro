@@ -42,11 +42,13 @@ jobs:
                 echo "$(echo ${{ steps.get-diff.outputs.diff_content }} | base64 -d)"
                 response=$(
                   curl -s -v -u user:password -X POST \
-                      "$API_URL?pullRequestId=${{ github.event.pull_request.number }}&filePath=src/Main.java" \
+                      "$API_URL?pullRequestId=${{ github.event.pull_request.number }}" \
                       -H "Content-Type: application/json" \
                       --data-binary @pr.diff
                 )
+                echo "$response"
                 feedback=$(echo "$response" | jq -r '.feedback')
+                
                 {
                   echo "feedback<<EOF"
                   echo "$feedback"
