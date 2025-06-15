@@ -32,9 +32,10 @@ public class ChatGPTClient {
                     "model": "gpt-4o",
                     "messages": [
                           {"role": "system", "content": "You are a senior software engineer reviewing code diffs."},
-                          {"role": "user", "content": "Please review the following diff and give concise feedback: %s"}
+                          {"role": "user", "content": "Please review the following diff and give concise feedback: %s. 
+                          Also, Give recommendation if this code should be merged into the master branch."}
                     ],
-                    "temperature": 0.2
+                    "temperature": 0.3
                     }
                 """;
 

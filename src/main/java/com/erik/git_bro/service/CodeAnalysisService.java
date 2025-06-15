@@ -6,6 +6,7 @@ import java.nio.file.Path;
 import java.nio.file.StandardOpenOption;
 import java.time.Instant;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
@@ -51,8 +52,11 @@ public class CodeAnalysisService {
 
     @Async("virtualThreadExecutor")
     public CompletableFuture<Object> analyzeDiff(final String pullRequestId,
-            final String diffContent) {
+            final String rawDiffContent) {
         try {
+            // First, peel away everything excpet what was added. 
+            final var diffContent = this.extractAddedLinesOnly(rawDiffContent);
+            log.info("Extracted Content: {}", diffContent);
             if (pullRequestId == null || diffContent == null) {
                 throw new IllegalArgumentException("Input parameters cannot be null");
             }
@@ -162,6 +166,13 @@ public class CodeAnalysisService {
 
     private String cleanChunk(String chunk) {
         return chunk.replaceAll("[\\p{Cntrl}&&[^\r\n\t]]", ""); // Remove illegal control characters
+    }
+
+    public String extractAddedLinesOnly(String diff) {
+        return Arrays.stream(diff.split("\n"))
+                .filter(line -> line.startsWith("+") && !line.startsWith("+++"))
+                .map(line -> line.substring(1)) // strip leading '+'
+                .collect(Collectors.joining("\n"));
     }
 
 }
