@@ -26,17 +26,19 @@ public class ChatGPTClient {
     private static final String API_URL = "https://api.openai.com/v1/chat/completions";
 
     public String analyzeCode(String diffChunk) throws IOException {
-        String payload = """
+        String payloadTemplate = """
                     {
                     "model": "gpt-4o",
                     "messages": [
                           {"role": "system", "content": "You are a senior software engineer reviewing code diffs."},
-                            {"role": "user", "content": "Please review the following diff and give concise feedback: %s"}
+                          {"role": "user", "content": "Please review the following diff and give concise feedback: %s"}
                     ],
                     "temperature": 0.2
                     }
-
                 """;
+
+        final String payload = String.format(payloadTemplate, diffChunk);
+
         RequestBody body = RequestBody.create(payload, MediaType.get("application/json"));
 
         Request request = new Request.Builder()
@@ -52,7 +54,5 @@ public class ChatGPTClient {
             return response.body().string();
         }
     }
-
-
 
 }

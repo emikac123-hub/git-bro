@@ -34,7 +34,7 @@ public class CodeReviewController {
                 .exceptionally(throwable -> {
                     Throwable cause = throwable.getCause() != null ? throwable.getCause() : throwable;
                     // Replace with SLF4J logging in production
-                    log.info("ERROR");
+                    log.info("Eror!");
                     final var error = ErrorResponse.builder()
                             .message(cause.getMessage())
                             .details(cause.getStackTrace().toString())
