@@ -1,11 +1,14 @@
 package com.erik.git_bro.service;
 
 import java.io.IOException;
+import java.net.URI;
+import java.net.http.HttpResponse;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.StandardOpenOption;
 import java.time.Instant;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 
@@ -17,21 +20,31 @@ import org.springframework.stereotype.Service;
 import com.erik.git_bro.ai.CodeAnalyzer;
 import com.erik.git_bro.model.Review;
 import com.erik.git_bro.repository.ReviewRepository;
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
 import lombok.extern.slf4j.Slf4j;
+import okhttp3.Call;
+import okhttp3.Callback;
+import okhttp3.MediaType;
+import okhttp3.OkHttpClient;
+import okhttp3.Request;
+import okhttp3.RequestBody;
+import okhttp3.Response;
+import okhttp3.ResponseBody;
 
 @Service
 
 @Slf4j
 public class CodeAnalysisService {
-
+    private final OkHttpClient client = new OkHttpClient();
     private final ParsingService parsingService;
     @Value("${app.feedback.file-path}")
     private String feedbackFilePath;
     private final ReviewRepository reviewRepository;
     private final CodeAnalyzer analyzer;
-    private final ObjectMapper objectMapper = new ObjectMapper();
+
 
     public CodeAnalysisService(@Qualifier("codeAnalyzer") CodeAnalyzer analyzer,
             ReviewRepository reviewRepository,
@@ -41,8 +54,15 @@ public class CodeAnalysisService {
         this.parsingService = parsingService;
     }
 
+    public CompletableFuture<?> analyzeFile(String filename, String diffContent) {
+        String prompt = String.format("Please review the following Git diff from file %s:\n\n%s", filename,
+                diffContent);
+
+        return analyzer.analyzeFile(prompt);
+    }
+
     @Async("virtualThreadExecutor")
-    public CompletableFuture<Object> analyzeDiff(final String pullRequestId,
+    public CompletableFuture<?> analyzeDiff(final String pullRequestId,
             final String rawDiffContent) {
         try {
             final var parseJSON = rawDiffContent;
@@ -57,7 +77,7 @@ public class CodeAnalysisService {
             List<String> chunks = this.parsingService.splitDiffIntoChunks(diffContent, 1000);
             log.info("chunks: {}", chunks);
             String feedback = this.analyzer.analyzeCode(chunks);
-            
+
             writeFeedbackToFile(pullRequestId, feedback);
             log.info("The Actual Feedback");
             log.info(feedback);

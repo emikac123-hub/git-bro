@@ -7,6 +7,7 @@ import org.springframework.stereotype.Component;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.CompletableFuture;
 
 @Component("codeBertAnalyzer")
 public class CodeBertAnalyzer implements CodeAnalyzer {
@@ -51,5 +52,11 @@ public class CodeBertAnalyzer implements CodeAnalyzer {
         } catch (Exception e) {
             return "Failed to parse CodeBERT response.";
         }
+    }
+
+    @Override
+    public CompletableFuture<String> analyzeFile(String prompt) {
+    
+        return CompletableFuture.completedFuture(null);
     }
 }

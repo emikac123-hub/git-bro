@@ -1,14 +1,16 @@
 package com.erik.git_bro.ai;
 
 import java.util.List;
+import java.util.concurrent.CompletableFuture;
 
-import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Component;
 
 import com.erik.git_bro.client.ChatGPTClient;
-import com.erik.git_bro.model.ErrorResponse;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+
+import okhttp3.OkHttpClient;
+
 
 @Component("chatGptAnalyzer")
 public class ChatGptAnalyzer implements CodeAnalyzer {
@@ -16,6 +18,7 @@ public class ChatGptAnalyzer implements CodeAnalyzer {
     private final ChatGPTClient client;
     private final ObjectMapper objectMapper = new ObjectMapper();
 
+    private final OkHttpClient okClient = new OkHttpClient();
     public ChatGptAnalyzer(ChatGPTClient client) {
         this.client = client;
     }
@@ -48,5 +51,12 @@ public class ChatGptAnalyzer implements CodeAnalyzer {
             throw new Exception("Failed to parse AI response: " + e.getMessage());
         }
     }
+
+     
+
+     @Override
+     public CompletableFuture<?>  analyzeFile(String prompt) {
+        return this.client.analyzeFile(prompt);
+     }
 
 }
