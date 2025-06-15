@@ -1,5 +1,7 @@
 package com.erik.git_bro.client;
 
+import java.io.IOException;
+
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
@@ -11,6 +13,7 @@ import okhttp3.MediaType;
 import okhttp3.OkHttpClient;
 import okhttp3.Request;
 import okhttp3.RequestBody;
+import okhttp3.Response;
 
 @Slf4j
 @Component
@@ -24,15 +27,18 @@ public class ChatGPTClient {
     private static final String API_URL = "https://api.openai.com/v1/chat/completions";
 
     public String analyzeCode(String diffChunk) throws Exception {
+
+        final var extractedChunk = this.extractInput(diffChunk);
+        log.info("CHUNK");
+        log.info(extractedChunk);
         String payloadTemplate = """
                     {
                     "model": "gpt-4o",
                     "messages": [
                           {"role": "system", "content": "You are a senior software engineer reviewing code diffs."},
-                          {"role": "user", "content": "Please review the following diff and give concise feedback: %s. 
-                          Also, Give recommendation if this code should be merged into the master branch."}
+                          {"role": "user", "content": "Please review the following diff and give concise feedback: %s"}
                     ],
-                    "temperature": 0.3
+                    "temperature": 0.2
                     }
                 """;
 
@@ -40,7 +46,6 @@ public class ChatGPTClient {
                                                                                                           // safely
         final String payload = String.format(payloadTemplate, escapedChunk);
 
-        log.info("The Payload: {}", payload);
         RequestBody body = RequestBody.create(payload, MediaType.get("application/json"));
 
         Request request = new Request.Builder()
@@ -48,13 +53,13 @@ public class ChatGPTClient {
                 .header("Authorization", "Bearer " + apiKey)
                 .post(body)
                 .build();
-        return "";
-        // try (Response response = client.newCall(request).execute()) {
-        //     if (!response.isSuccessful()) {
-        //         throw new IOException("API request failed: " + response.body().string());
-        //     }
-        //     return response.body().string();
-        // }
+
+        try (Response response = client.newCall(request).execute()) {
+            if (!response.isSuccessful()) {
+                throw new IOException("API request failed: " + response.body().string());
+            }
+            return response.body().string();
+        }
     }
 
     public String extractInput(String jsonString) throws Exception {
