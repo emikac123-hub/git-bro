@@ -44,6 +44,8 @@ public class ChatGPTClient {
 
         final String escapedChunk = objectMapper.writeValueAsString(extractedChunk).replaceAll("^\"|\"$", ""); // escape
                                                                                                           // safely
+        
+        log.info("ESCAPED!!, {}", escapedChunk);
         final String payload = String.format(payloadTemplate, escapedChunk);
 
         RequestBody body = RequestBody.create(payload, MediaType.get("application/json"));
