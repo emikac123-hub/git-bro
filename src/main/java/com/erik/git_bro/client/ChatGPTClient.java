@@ -43,6 +43,7 @@ public class ChatGPTClient {
                                                                                                           // safely
         final String payload = String.format(payloadTemplate, escapedChunk);
 
+        log.info("The Payload: {}", payload);
         RequestBody body = RequestBody.create(payload, MediaType.get("application/json"));
 
         Request request = new Request.Builder()
