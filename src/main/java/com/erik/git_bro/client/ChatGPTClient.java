@@ -1,7 +1,5 @@
 package com.erik.git_bro.client;
 
-import java.io.IOException;
-
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
@@ -13,7 +11,6 @@ import okhttp3.MediaType;
 import okhttp3.OkHttpClient;
 import okhttp3.Request;
 import okhttp3.RequestBody;
-import okhttp3.Response;
 
 @Slf4j
 @Component
@@ -51,13 +48,13 @@ public class ChatGPTClient {
                 .header("Authorization", "Bearer " + apiKey)
                 .post(body)
                 .build();
-
-        try (Response response = client.newCall(request).execute()) {
-            if (!response.isSuccessful()) {
-                throw new IOException("API request failed: " + response.body().string());
-            }
-            return response.body().string();
-        }
+        return "";
+        // try (Response response = client.newCall(request).execute()) {
+        //     if (!response.isSuccessful()) {
+        //         throw new IOException("API request failed: " + response.body().string());
+        //     }
+        //     return response.body().string();
+        // }
     }
 
     public String extractInput(String jsonString) throws Exception {
