@@ -79,7 +79,7 @@ public class ChatGPTClient {
         }
     }
 
-    public CompletableFuture<ResponseEntity<?>> analyzeFile(String prompt) {
+    public CompletableFuture<String> analyzeFile(String prompt) {
         CompletableFuture<String> future = new CompletableFuture<>();
 
         try {
