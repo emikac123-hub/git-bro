@@ -34,7 +34,7 @@ jobs:
             - name: Call Code Review API
               id: call-api
               env:
-                API_URL: https://1fe1-149-154-20-92.ngrok-free.app/api/review/analyze
+                API_URL: https://c8c4-149-154-20-92.ngrok-free.app/api/review/analyze
                 HUGGINGFACE_API_TOKEN: ${{ secrets.HUGGINGFACE_API_TOKEN }}
               run: |
                 # POST the raw diff file produced in the previous step

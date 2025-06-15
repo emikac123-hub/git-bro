@@ -42,7 +42,7 @@ public class ChatGPTClient {
 
         // Add each diff chunk as a separate user message
         for (String chunk : chunks) {
-            messages.add(new ChatMessage("user", "Please review this diff:\n" + chunk));
+            messages.add(new ChatMessage("user", "Please review this diff! :\n" + chunk));
         }
 
         // Build the request body map
