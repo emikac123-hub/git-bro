@@ -27,10 +27,6 @@ public class ChatGPTClient {
     private static final String API_URL = "https://api.openai.com/v1/chat/completions";
 
     public String analyzeCode(String diffChunk) throws Exception {
-
-        final var extractedChunk = this.extractInput(diffChunk);
-        log.info("CHUNK");
-        log.info(extractedChunk);
         String payloadTemplate = """
                     {
                     "model": "gpt-4o",
@@ -42,7 +38,9 @@ public class ChatGPTClient {
                     }
                 """;
 
-        final String payload = String.format(payloadTemplate, extractedChunk);
+        final String escapedChunk = objectMapper.writeValueAsString(diffChunk).replaceAll("^\"|\"$", ""); // escape
+                                                                                                          // safely
+        final String payload = String.format(payloadTemplate, escapedChunk);
 
         RequestBody body = RequestBody.create(payload, MediaType.get("application/json"));
 
