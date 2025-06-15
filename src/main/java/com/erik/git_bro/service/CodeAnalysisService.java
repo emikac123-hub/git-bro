@@ -39,7 +39,7 @@ public class CodeAnalysisService {
     private final ReviewRepository reviewRepository;
     private final CodeAnalyzer analyzer;
     private final ObjectMapper objectMapper = new ObjectMapper();
-    private static final int CHUNK_SIZE = 500;
+    private static final int CHUNK_SIZE = 00;
     private static final int freeTierAPILimit = 20;
 
     public CodeAnalysisService(@Qualifier("codeAnalyzer") CodeAnalyzer analyzer,
@@ -68,7 +68,6 @@ public class CodeAnalysisService {
                     .map(chunk -> {
 
                         try {
-                            log.info("CHUNK: {}", chunk);
                             final String feedback = analyzer.analyzeCode(chunk);
                             return analyzer.parseAiResponse(feedback);
                         } catch (final IOException e) {
@@ -105,11 +104,11 @@ public class CodeAnalysisService {
 
     private List<String> chunkItUp(final String diffContent) throws JsonProcessingException {
         List<String> chunks = new ArrayList<>();
-        // if (this.aiProviderProperties.getAiProvider().equals("chatgpt")) {
-        //     chunks.add(diffContent);
-        //     return chunks;
+        if (this.aiProviderProperties.getAiProvider().equals("chatgpt")) {
+            chunks.add(diffContent);
+            return chunks;
             
-        // }
+        }
         for (int i = 0; i < diffContent.length(); i += CHUNK_SIZE) {
             String chunk = diffContent.substring(i, Math.min(i + CHUNK_SIZE, diffContent.length()));
             chunk = chunk.length() > CHUNK_SIZE ? chunk.substring(0, CHUNK_SIZE) : chunk;

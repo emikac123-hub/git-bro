@@ -28,9 +28,9 @@ public class ChatGPTClient {
 
     public String analyzeCode(String diffChunk) throws Exception {
 
-        final var extractedChunk = this.extractInput(diffChunk);
+        final var extractedChunk =  this.extractInput(diffChunk);
+
         log.info("Big CHUNK!!!");
-        log.info(extractedChunk);
         String payloadTemplate = """
                     {
                     "model": "gpt-4o",
@@ -42,7 +42,7 @@ public class ChatGPTClient {
                     }
                 """;
 
-        final String escapedChunk = objectMapper.writeValueAsString(diffChunk).replaceAll("^\"|\"$", ""); // escape
+        final String escapedChunk = objectMapper.writeValueAsString(extractedChunk).replaceAll("^\"|\"$", ""); // escape
                                                                                                           // safely
         final String payload = String.format(payloadTemplate, escapedChunk);
 
