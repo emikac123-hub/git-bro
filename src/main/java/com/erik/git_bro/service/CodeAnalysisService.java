@@ -106,8 +106,8 @@ public class CodeAnalysisService {
     private List<String> chunkItUp(final String diffContent) throws JsonProcessingException {
         List<String> chunks = new ArrayList<>();
         if (this.aiProviderProperties.getAiProvider().equals("chatgpt")) {
-            chunks.add(diffContent);
-            return chunks;
+            return this.chunkByFile(diffContent);
+            
         }
         for (int i = 0; i < diffContent.length(); i += CHUNK_SIZE) {
             String chunk = diffContent.substring(i, Math.min(i + CHUNK_SIZE, diffContent.length()));
