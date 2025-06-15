@@ -1,7 +1,9 @@
 package com.erik.git_bro.controller;
 
+import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
 
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -29,22 +31,29 @@ public class CodeReviewController {
             @RequestBody String diffContent) {
         log.info("Received review request for PR {}. Diff length: {}", pullRequestId,
                 diffContent.length());
-        return codeAnalysisService.analyzeDiff(pullRequestId,  diffContent)
-                .thenApply(review -> ResponseEntity.ok(review))
+        return codeAnalysisService.analyzeDiff(pullRequestId, diffContent)
+                .thenApply(ResponseEntity::ok)
                 .exceptionally(throwable -> {
-                    Throwable cause = throwable.getCause() != null ? throwable.getCause() : throwable;
-                    // Replace with SLF4J logging in production
-                    log.info("Error!");
-                    final var error = ErrorResponse.builder()
-                            .message(cause.getMessage())
-                            .details(cause.getCause().getLocalizedMessage())
-                            .build();
-                    if (cause instanceof IllegalArgumentException) {
+                    Throwable root = Optional.ofNullable(throwable.getCause()).orElse(throwable);
 
+                    log.error("Error during code analysis", root);
+
+                    String message = root.getMessage();
+                    String details = Optional.ofNullable(root.getCause())
+                            .map(Throwable::getLocalizedMessage)
+                            .orElse("No additional details");
+
+                    ErrorResponse error = ErrorResponse.builder()
+                            .message(message)
+                            .details(details)
+                            .build();
+
+                    if (root instanceof IllegalArgumentException) {
                         return ResponseEntity.badRequest().body(error);
                     }
-                    log.error("Something went wrong: ", cause);
-                    return ResponseEntity.status(500).body(error);
+
+                    return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(error);
                 });
+
     }
 }
