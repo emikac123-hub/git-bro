@@ -52,10 +52,10 @@ public class CodeAnalysisService {
 
     @Async("virtualThreadExecutor")
     public CompletableFuture<Object> analyzeDiff(final String pullRequestId,
-            final String rawDiffContent) {
+            final String diffContent) {
         try {
             // First, peel away everything excpet what was added. 
-            final var diffContent = this.extractAddedLinesOnly(rawDiffContent);
+         //   final var diffContent = this.extractAddedLinesOnly(rawDiffContent);
             log.info("Extracted Content: {}", diffContent);
             if (pullRequestId == null || diffContent == null) {
                 throw new IllegalArgumentException("Input parameters cannot be null");
