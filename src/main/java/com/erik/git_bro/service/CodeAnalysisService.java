@@ -19,6 +19,7 @@ import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 
 import com.erik.git_bro.ai.CodeAnalyzer;
+import com.erik.git_bro.config.AiProviderProperties;
 import com.erik.git_bro.model.Review;
 import com.erik.git_bro.repository.ReviewRepository;
 import com.fasterxml.jackson.core.JsonProcessingException;
@@ -30,6 +31,8 @@ import lombok.extern.slf4j.Slf4j;
 
 @Slf4j
 public class CodeAnalysisService {
+
+    private final AiProviderProperties aiProviderProperties;
     @Value("${app.feedback.file-path}")
     private String feedbackFilePath;
     private final ReviewRepository reviewRepository;
@@ -38,9 +41,12 @@ public class CodeAnalysisService {
     private static final int CHUNK_SIZE = 200;
     private static final int freeTierAPILimit = 20;
 
-    public CodeAnalysisService(@Qualifier("codeAnalyzer") CodeAnalyzer analyzer, ReviewRepository reviewRepository) {
+    public CodeAnalysisService(@Qualifier("codeAnalyzer") CodeAnalyzer analyzer,
+            AiProviderProperties aiProviderProperties,
+            ReviewRepository reviewRepository) {
         this.analyzer = analyzer;
         this.reviewRepository = reviewRepository;
+        this.aiProviderProperties = aiProviderProperties;
     }
 
     @Async("virtualThreadExecutor")
@@ -52,13 +58,7 @@ public class CodeAnalysisService {
             }
 
             List<String> chunks = this.chunkItUp(diffContent);
-            if (chunks.size() > freeTierAPILimit) {
-                int overFlow = chunks.size() - freeTierAPILimit;
-                while (overFlow > 0) {
-                    chunks.removeLast();
-                    --overFlow;
-                }
-            }
+
             log.info("Split diffContent for PR {} into {} chunks", pullRequestId, chunks.size());
 
             List<String> feedbacks = chunks.stream()
@@ -101,12 +101,23 @@ public class CodeAnalysisService {
 
     private List<String> chunkItUp(final String diffContent) throws JsonProcessingException {
         List<String> chunks = new ArrayList<>();
+        if (this.aiProviderProperties.getAiProvider().equals("chatgpt")) {
+            chunks.add(diffContent);
+            return chunks;
+        }
         for (int i = 0; i < diffContent.length(); i += CHUNK_SIZE) {
             String chunk = diffContent.substring(i, Math.min(i + CHUNK_SIZE, diffContent.length()));
             chunk = chunk.length() > CHUNK_SIZE ? chunk.substring(0, CHUNK_SIZE) : chunk;
             String escapedChunk = objectMapper.writeValueAsString(chunk);
             log.debug("json payload: {}", escapedChunk);
             chunks.add(cleanChunk(escapedChunk));
+        }
+        if (chunks.size() > freeTierAPILimit) {
+            int overFlow = chunks.size() - freeTierAPILimit;
+            while (overFlow > 0) {
+                chunks.removeLast();
+                --overFlow;
+            }
         }
         return chunks;
     }

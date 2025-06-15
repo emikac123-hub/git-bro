@@ -5,6 +5,7 @@ import java.io.IOException;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
+import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
 import lombok.extern.slf4j.Slf4j;
@@ -25,7 +26,9 @@ public class ChatGPTClient {
     private final ObjectMapper objectMapper = new ObjectMapper();
     private static final String API_URL = "https://api.openai.com/v1/chat/completions";
 
-    public String analyzeCode(String diffChunk) throws IOException {
+    public String analyzeCode(String diffChunk) throws Exception {
+
+        final var extractedChunk = this.extractInput(diffChunk);
         String payloadTemplate = """
                     {
                     "model": "gpt-4o",
@@ -37,7 +40,7 @@ public class ChatGPTClient {
                     }
                 """;
 
-        final String payload = String.format(payloadTemplate, diffChunk);
+        final String payload = String.format(payloadTemplate, extractedChunk);
 
         RequestBody body = RequestBody.create(payload, MediaType.get("application/json"));
 
@@ -53,6 +56,12 @@ public class ChatGPTClient {
             }
             return response.body().string();
         }
+    }
+
+    public String extractInput(String jsonString) throws Exception {
+        ObjectMapper objectMapper = new ObjectMapper();
+        JsonNode rootNode = objectMapper.readTree(jsonString);
+        return rootNode.get("input").asText();
     }
 
 }
