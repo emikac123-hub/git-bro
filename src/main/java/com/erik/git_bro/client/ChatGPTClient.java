@@ -29,7 +29,7 @@ public class ChatGPTClient {
     public String analyzeCode(String diffChunk) throws Exception {
 
         final var extractedChunk = this.extractInput(diffChunk);
-        log.info("CHUNK!!!");
+        log.info("Big CHUNK!!!");
         log.info(extractedChunk);
         String payloadTemplate = """
                     {
