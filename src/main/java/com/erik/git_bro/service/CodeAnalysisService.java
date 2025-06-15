@@ -45,7 +45,7 @@ public class CodeAnalysisService {
     public CompletableFuture<Object> analyzeDiff(final String pullRequestId,
             final String rawDiffContent) {
         try {
-            final var parseJSON = this.parsingService.extractInput(rawDiffContent);
+            final var parseJSON = rawDiffContent;
             final var filePath = this.parsingService.extractFilePathFromDiff(rawDiffContent);
 
             log.info("raw content: {}", rawDiffContent);
