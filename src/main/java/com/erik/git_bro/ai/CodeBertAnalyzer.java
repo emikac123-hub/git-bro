@@ -19,8 +19,8 @@ public class CodeBertAnalyzer implements CodeAnalyzer {
     }
 
     @Override
-    public String analyzeCode(String input) throws Exception {
-        return client.analyzeCode(input);
+    public String analyzeCode(List<String> chunkedInput) throws Exception {
+        return client.analyzeCode(chunkedInput);
     }
 
     @Override

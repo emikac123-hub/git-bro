@@ -34,17 +34,17 @@ public class CodeReviewController {
                 .exceptionally(throwable -> {
                     Throwable cause = throwable.getCause() != null ? throwable.getCause() : throwable;
                     // Replace with SLF4J logging in production
-                    log.info("Eror!");
+                    log.info("Error!");
                     final var error = ErrorResponse.builder()
                             .message(cause.getMessage())
-                            .details(cause.getStackTrace().toString())
+                            .details(cause.getCause().getLocalizedMessage())
                             .build();
                     if (cause instanceof IllegalArgumentException) {
 
                         return ResponseEntity.badRequest().body(error);
                     }
-                    log.info(cause.getMessage());
-                    return ResponseEntity.status(500).body(null);
+                    log.error("Something went wrong: ", cause);
+                    return ResponseEntity.status(500).body(error);
                 });
     }
 }

@@ -1,8 +1,12 @@
 package com.erik.git_bro.ai;
 
+import java.util.List;
+
+import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Component;
 
 import com.erik.git_bro.client.ChatGPTClient;
+import com.erik.git_bro.model.ErrorResponse;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
@@ -17,17 +21,32 @@ public class ChatGptAnalyzer implements CodeAnalyzer {
     }
 
     @Override
-    public String analyzeCode(String input) throws Exception {
-        return client.analyzeCode(input);
+    public String analyzeCode(List<String> chunkedInput) throws Exception {
+        return client.analyzeCode(chunkedInput);
     }
 
     @Override
-    public String parseAiResponse(String rawResponse) {
+    public String parseAiResponse(String aiJsonResponse) throws Exception {
+        ObjectMapper mapper = new ObjectMapper();
+
         try {
-            JsonNode node = objectMapper.readTree(rawResponse);
-            return node.get("choices").get(0).get("message").get("content").asText();
+            JsonNode root = mapper.readTree(aiJsonResponse);
+            JsonNode content = root
+                    .path("choices")
+                    .get(0)
+                    .path("message")
+                    .path("content");
+
+            if (content.isMissingNode() || content.isNull()) {
+                throw new Exception(
+                        "The AI response did not contain a 'message.content' field. Please ensure the response is properly formatted.");
+            }
+
+            return content.asText();
+
         } catch (Exception e) {
-            return "Failed to parse ChatGPT response.";
+            throw new Exception("Failed to parse AI response: " + e.getMessage());
         }
     }
+
 }

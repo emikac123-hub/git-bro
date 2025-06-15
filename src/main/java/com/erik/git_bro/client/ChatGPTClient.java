@@ -1,13 +1,19 @@
 package com.erik.git_bro.client;
 
 import java.io.IOException;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.theokanning.openai.completion.chat.ChatMessage;
 
+import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import okhttp3.MediaType;
 import okhttp3.OkHttpClient;
@@ -17,6 +23,7 @@ import okhttp3.Response;
 
 @Slf4j
 @Component
+@RequiredArgsConstructor
 public class ChatGPTClient {
 
     @Value("${openai.api.key}")
@@ -26,29 +33,29 @@ public class ChatGPTClient {
     private final ObjectMapper objectMapper = new ObjectMapper();
     private static final String API_URL = "https://api.openai.com/v1/chat/completions";
 
-    public String analyzeCode(String diffChunk) throws Exception {
+    public String analyzeCode(List<String> chunks) throws Exception {
+        List<ChatMessage> messages = new ArrayList<>();
 
-        final var extractedChunk =  this.extractInput(diffChunk);
+        log.info("The chunks: {}", chunks);
+        // Add the system message
+        messages.add(new ChatMessage("system", "You are a senior software engineer reviewing code diffs."));
 
-        log.info("Big CHUNK!!!");
-        String payloadTemplate = """
-                    {
-                    "model": "gpt-4o",
-                    "messages": [
-                          {"role": "system", "content": "You are a senior software engineer reviewing code diffs."},
-                          {"role": "user", "content": "Please review the following diff and give concise feedback: %s"}
-                    ],
-                    "temperature": 0.2
-                    }
-                """;
+        // Add each diff chunk as a separate user message
+        for (String chunk : chunks) {
+            messages.add(new ChatMessage("user", "Please review this diff:\n" + chunk));
+        }
 
-        final String escapedChunk = objectMapper.writeValueAsString(extractedChunk).replaceAll("^\"|\"$", ""); // escape
-                                                                                                          // safely
-        
-        log.info("ESCAPED!!, {}", escapedChunk);
-        final String payload = String.format(payloadTemplate, escapedChunk);
+        // Build the request body map
+        Map<String, Object> payloadMap = new HashMap<>();
+        payloadMap.put("model", "gpt-4o");
+        payloadMap.put("temperature", 0.2);
+        payloadMap.put("messages", messages);
 
-        RequestBody body = RequestBody.create(payload, MediaType.get("application/json"));
+        // Serialize to JSON
+        String payloadJson = objectMapper.writeValueAsString(payloadMap);
+
+        log.info("The payload: {}", payloadMap);
+        RequestBody body = RequestBody.create(payloadJson, MediaType.get("application/json"));
 
         Request request = new Request.Builder()
                 .url(API_URL)
@@ -62,12 +69,6 @@ public class ChatGPTClient {
             }
             return response.body().string();
         }
-    }
-
-    public String extractInput(String jsonString) throws Exception {
-        ObjectMapper objectMapper = new ObjectMapper();
-        JsonNode rootNode = objectMapper.readTree(jsonString);
-        return rootNode.get("input").asText();
     }
 
 }

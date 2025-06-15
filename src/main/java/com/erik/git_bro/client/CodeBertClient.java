@@ -1,6 +1,7 @@
 package com.erik.git_bro.client;
 
 import java.io.IOException;
+import java.util.List;
 import java.util.Map;
 
 import org.springframework.beans.factory.annotation.Value;
@@ -22,14 +23,14 @@ public class CodeBertClient  {
     @Value("${huggingface.api.token}")
     private String huggingfaceToken;
     private final OkHttpClient client = new OkHttpClient();
-
+    private final ObjectMapper objectMapper = new ObjectMapper();
 
     private static final String API_URL = "https://api-inference.huggingface.co/models/microsoft/codebert-base";
  
 
 
-    public String analyzeCode(String codeSnippet) throws IOException {
-        Map<String, String> payloadMap = Map.of("inputs", codeSnippet);
+    public String analyzeCode(List<String> codeSnippet) throws IOException {
+        Map<String, String> payloadMap = Map.of("inputs", objectMapper.writeValueAsString(codeSnippet));
         String jsonPayload = new ObjectMapper().writeValueAsString(payloadMap);
         final var body = RequestBody.create(
                 jsonPayload,
