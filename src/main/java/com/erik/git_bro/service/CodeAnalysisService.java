@@ -56,7 +56,6 @@ public class CodeAnalysisService {
         try {
             // First, peel away everything excpet what was added. 
             final var diffContent = this.extractAddedLinesOnly(rawDiffContent);
-            log.info("Extracted Content: {}", diffContent);
             if (pullRequestId == null || diffContent == null) {
                 throw new IllegalArgumentException("Input parameters cannot be null");
             }
@@ -107,7 +106,8 @@ public class CodeAnalysisService {
     private List<String> chunkItUp(final String diffContent) throws JsonProcessingException {
         List<String> chunks = new ArrayList<>();
         if (this.aiProviderProperties.getAiProvider().equals("chatgpt")) {
-            return this.chunkByFile(diffContent);
+            chunks.add(diffContent);
+            return chunks;
             
         }
         for (int i = 0; i < diffContent.length(); i += CHUNK_SIZE) {
