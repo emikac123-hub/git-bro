@@ -1,17 +1,17 @@
-# 🧠 Git-Bro: GitHub PR AI Code Reviewer
+# Git-Bro: GitHub PR AI Code Reviewer
 
 **Git-Bro** is a Spring Boot application that performs automated code review on GitHub pull requests using AI models like CodeBERT or ChatGPT. It ingests git diffs, analyzes them chunk-by-chunk, and returns meaningful feedback about potential bugs, style violations, or other code issues.
 
 ---
 
-## 🚀 Features
+## Features
 
-- ✅ Git diff ingestion and chunking  
-- 🤖 AI-powered code analysis using CodeBERT (or plug in ChatGPT)  
-- 📦 Persistence via Spring Data JPA (H2 in-memory DB)  
-- 🧵 Asynchronous processing using virtual threads  
-- ✍️ Feedback is saved to disk for auditing  
-- 🔄 Pluggable AI client architecture for CodeBERT, OpenAI, or others  
+-  Git diff ingestion and chunking  
+-  AI-powered code analysis using CodeBERT (or plug in ChatGPT)  
+-  Persistence via Spring Data JPA (H2 in-memory DB)  
+-  Asynchronous processing using virtual threads  
+-  Feedback is saved to disk for auditing  
+-  Pluggable AI client architecture for CodeBERT, OpenAI, or others  
 
 ---
 

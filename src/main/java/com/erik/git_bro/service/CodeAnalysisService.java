@@ -140,8 +140,9 @@ public class CodeAnalysisService {
 
         String[] parts = diffContent.split("(?=^diff --git )", -1);
         for (String part : parts) {
-            if (part.strip().isEmpty())
+            if (part.strip().isEmpty()) {
                 continue; // skip empty entries
+            }
             fileChunks.add(part.strip());
         }
 
