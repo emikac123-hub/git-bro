@@ -30,4 +30,4 @@ databaseChangeLog:
                   type: CLOB
               - column:
                   name: created_at
-                  type: VARCHAR(255)
+                  type: TIMESTAMP

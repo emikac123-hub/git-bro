@@ -17,18 +17,53 @@ import okhttp3.Request;
 import okhttp3.RequestBody;
 import okhttp3.Response;
 
+/**
+ * {@code CodeBertClient} is a Spring component responsible for interacting with the Hugging Face CodeBERT model API.
+ * <p>
+ * It provides functionality to send code snippets to the CodeBERT inference endpoint
+ * and retrieve AI-generated analysis or embeddings synchronously.
+ * </p>
+ * <p>
+ * Uses OkHttp for HTTP requests and Jackson for JSON serialization/deserialization.
+ * </p>
+ */
 @Component
 @Slf4j
 public class CodeBertClient  {
+
+    /**
+     * Hugging Face API token for authenticating requests.
+     * Injected from application properties.
+     */
     @Value("${huggingface.api.token}")
     private String huggingfaceToken;
+
+    /**
+     * OkHttpClient instance used for HTTP communication.
+     */
     private final OkHttpClient client = new OkHttpClient();
+
+    /**
+     * Jackson ObjectMapper instance for JSON serialization and deserialization.
+     */
     private final ObjectMapper objectMapper = new ObjectMapper();
 
+    /**
+     * The Hugging Face inference API URL for the CodeBERT base model.
+     */
     private static final String API_URL = "https://api-inference.huggingface.co/models/microsoft/codebert-base";
- 
 
-
+    /**
+     * Analyzes the given list of code snippets by sending them to the CodeBERT Hugging Face inference API.
+     * <p>
+     * Constructs a JSON payload with the code snippets, sends an HTTP POST request with the Hugging Face API token,
+     * and returns the raw JSON response from the API as a string.
+     * </p>
+     *
+     * @param codeSnippet List of code snippet strings to analyze.
+     * @return Raw JSON response from the CodeBERT model as a String.
+     * @throws IOException if the HTTP request fails or the API returns an error response.
+     */
     public String analyzeCode(List<String> codeSnippet) throws IOException {
         Map<String, String> payloadMap = Map.of("inputs", objectMapper.writeValueAsString(codeSnippet));
         String jsonPayload = new ObjectMapper().writeValueAsString(payloadMap);
@@ -55,7 +90,10 @@ public class CodeBertClient  {
         }
     }
 
-
+    /**
+     * Lifecycle callback that logs the Hugging Face API token once the component is constructed.
+     * Useful for verifying configuration during application startup.
+     */
     @PostConstruct
     public void init() {
         System.out.println("Loaded HuggingFace Token: " + huggingfaceToken);
