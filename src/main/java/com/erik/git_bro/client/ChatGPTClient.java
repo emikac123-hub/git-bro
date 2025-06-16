@@ -6,6 +6,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.TimeUnit;
 
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.ResponseEntity;
@@ -35,10 +36,13 @@ public class ChatGPTClient {
     @Value("${openai.api.key}")
     private String apiKey;
 
-    private final OkHttpClient client = new OkHttpClient();
+    OkHttpClient okClient = new OkHttpClient.Builder()
+            .connectTimeout(30, TimeUnit.SECONDS)
+            .writeTimeout(30, TimeUnit.SECONDS)
+            .readTimeout(180, TimeUnit.SECONDS)
+            .build();
     private final ObjectMapper objectMapper = new ObjectMapper();
     private static final String API_URL = "https://api.openai.com/v1/chat/completions";
-
 
     public String analyzeCode(List<String> chunks) throws Exception {
         List<ChatMessage> messages = new ArrayList<>();
@@ -71,7 +75,7 @@ public class ChatGPTClient {
                 .post(body)
                 .build();
 
-        try (Response response = client.newCall(request).execute()) {
+        try (Response response = okClient.newCall(request).execute()) {
             if (!response.isSuccessful()) {
                 throw new IOException("API request failed: " + response.body().string());
             }

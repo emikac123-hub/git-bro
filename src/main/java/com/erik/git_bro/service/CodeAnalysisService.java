@@ -38,7 +38,6 @@ import okhttp3.ResponseBody;
 
 @Slf4j
 public class CodeAnalysisService {
-    private final OkHttpClient client = new OkHttpClient();
     private final ParsingService parsingService;
     @Value("${app.feedback.file-path}")
     private String feedbackFilePath;

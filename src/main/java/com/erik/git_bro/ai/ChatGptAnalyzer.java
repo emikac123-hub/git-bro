@@ -18,11 +18,7 @@ public class ChatGptAnalyzer implements CodeAnalyzer {
     private final ChatGPTClient client;
     private final ObjectMapper objectMapper = new ObjectMapper();
 
-    OkHttpClient okClient = new OkHttpClient.Builder()
-            .connectTimeout(30, TimeUnit.SECONDS)
-            .writeTimeout(30, TimeUnit.SECONDS)
-            .readTimeout(180, TimeUnit.SECONDS)
-            .build();
+
 
     public ChatGptAnalyzer(ChatGPTClient client) {
         this.client = client;
