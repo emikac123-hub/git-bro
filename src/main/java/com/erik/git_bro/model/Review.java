@@ -49,7 +49,7 @@ public class Review {
     private String prUrl;
 
     /** File path of the source file related to the review. */
-    private String filePath;
+    private String fileName;
 
     /** Original diff content of the code changes. */
     @Lob

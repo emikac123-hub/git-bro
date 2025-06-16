@@ -17,7 +17,7 @@ databaseChangeLog:
                   type: TIMESTAMP
                   defaultValueComputed: CURRENT_TIMESTAMP
               - column:
-                  name: file_path
+                  name: file_name
                   type: VARCHAR(512)
               - column:
                   name: diff_content

@@ -27,13 +27,16 @@ import okhttp3.Response;
 import okhttp3.ResponseBody;
 
 /**
- * {@code ChatGPTClient} is a Spring component responsible for interacting with the OpenAI ChatGPT API.
+ * {@code ChatGPTClient} is a Spring component responsible for interacting with
+ * the OpenAI ChatGPT API.
  * <p>
- * It provides methods to send code diffs or chunks of code to the ChatGPT API and retrieve AI-generated
+ * It provides methods to send code diffs or chunks of code to the ChatGPT API
+ * and retrieve AI-generated
  * code reviews asynchronously or synchronously.
  * </p>
  * <p>
- * Uses the OkHttp client to handle HTTP requests and Jackson for JSON serialization/deserialization.
+ * Uses the OkHttp client to handle HTTP requests and Jackson for JSON
+ * serialization/deserialization.
  * </p>
  */
 @Slf4j
@@ -48,7 +51,8 @@ public class ChatGPTClient {
     private String apiKey;
 
     /**
-     * OkHttpClient instance configured with timeouts for connection, write, and read operations.
+     * OkHttpClient instance configured with timeouts for connection, write, and
+     * read operations.
      */
     OkHttpClient okClient = new OkHttpClient.Builder()
             .connectTimeout(30, TimeUnit.SECONDS)
@@ -63,11 +67,14 @@ public class ChatGPTClient {
     /**
      * Sends a list of code chunks to the ChatGPT API for synchronous analysis.
      * <p>
-     * This method constructs a chat completion request with a system message identifying the role as
-     * a senior software engineer reviewing code diffs and appends each chunk as a user message.
+     * This method constructs a chat completion request with a system message
+     * identifying the role as
+     * a senior software engineer reviewing code diffs and appends each chunk as a
+     * user message.
      * </p>
      * <p>
-     * The method executes the HTTP request synchronously and returns the raw JSON response as a string.
+     * The method executes the HTTP request synchronously and returns the raw JSON
+     * response as a string.
      * </p>
      *
      * @param chunks List of code diff chunks to be reviewed.
@@ -116,40 +123,52 @@ public class ChatGPTClient {
     /**
      * Asynchronously analyzes a file diff content using the ChatGPT API.
      * <p>
-     * Constructs a detailed prompt that asks ChatGPT to review the Git diff with focus on
+     * Constructs a detailed prompt that asks ChatGPT to review the Git diff with
+     * focus on
      * various quality and security aspects, then sends the request asynchronously.
      * </p>
      * <p>
-     * Uses OkHttp's async call mechanism and returns a {@link CompletableFuture} that completes with
+     * Uses OkHttp's async call mechanism and returns a {@link CompletableFuture}
+     * that completes with
      * the extracted textual review content on success or exceptionally on failure.
      * </p>
      *
      * @param filename    The name of the file being analyzed.
      * @param diffContent The git diff content of the file.
-     * @return A {@link CompletableFuture} completing with the AI-generated review text.
+     * @return A {@link CompletableFuture} completing with the AI-generated review
+     *         text.
      */
     public CompletableFuture<String> analyzeFile(String filename, String diffContent) {
         CompletableFuture<String> future = new CompletableFuture<>();
-        String prompt = String.format("""
-                You are an expert senior Java software engineer specializing in backend services and code parsing.
+        String prompt = String.format(
+                """
+                        You are an expert senior Java software engineer specializing in backend services and code parsing.
+                        Prioritize the most critical issues first. Limit your response to 25 lines maximum.
+                        Review the following Git diff from file %s:
 
-                Please review the following Git diff from file %s:
+                        %s
 
-                %s
+                        Focus your review on:
 
-                Focus your review on:
+                        1. Correctness and efficiency of parsing and filtering operations.
+                        2. Code style, readability, and maintainability improvements.
+                        3. Handling of edge cases and robustness against unusual inputs.
+                        4. Performance considerations and potential optimizations.
+                        5. Suggestions for unit and integration tests.
+                        6. Quality of error handling and logging.
+                        7. Security implications when parsing or processing inputs.
 
-                1. Correctness and efficiency of parsing and filtering operations.
-                2. Code style, readability, and maintainability improvements.
-                3. Handling of edge cases and robustness against unusual inputs.
-                4. Performance considerations and potential optimizations.
-                5. Suggestions for unit and integration tests.
-                6. Quality of error handling and logging.
-                7. Security implications when parsing or processing inputs.
+                        Keep suggestions concise. Focus on specific lines of code wherever possible.
 
-                Lastly, provide a clear final recommendation on whether this pull request should be merged.
-                If the issues found are severe, explicitly advise against merging. Always include this recommendation.
-                """, filename, diffContent);
+                        At the end of your response:
+
+                        - Provide a clear final recommendation on whether this pull request should be merged.
+                        - Clearly state: **'Issue Found: true/false'** — where *true* means you detected a bug, vulnerability, or correctness problem.
+                        - If the issues found are severe, explicitly advise against merging. Always include this section.
+                        
+
+                                        """,
+                filename, diffContent);
 
         try {
             String json = objectMapper.writeValueAsString(Map.of(

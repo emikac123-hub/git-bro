@@ -1,6 +1,7 @@
 package com.erik.git_bro.service;
 
 import java.io.IOException;
+import java.math.BigDecimal;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.StandardOpenOption;
@@ -22,13 +23,17 @@ import lombok.extern.slf4j.Slf4j;
  * persisting the analysis results as {@link Review} entities, and optionally
  * writing feedback to a file.
  * <p>
- * This service asynchronously processes code diffs by sending them to an AI analyzer,
- * then saves the feedback along with relevant metadata (file path, diff content, timestamp)
- * into the database. It also provides functionality to persist feedback logs to a
+ * This service asynchronously processes code diffs by sending them to an AI
+ * analyzer,
+ * then saves the feedback along with relevant metadata (file path, diff
+ * content, timestamp)
+ * into the database. It also provides functionality to persist feedback logs to
+ * a
  * configured file path.
  * </p>
  * <p>
- * The {@link #analyzeFile(String, String)} method returns a {@link CompletableFuture}
+ * The {@link #analyzeFile(String, String)} method returns a
+ * {@link CompletableFuture}
  * that completes with the AI feedback once analysis and persistence are done.
  * </p>
  */
@@ -49,7 +54,8 @@ public class CodeAnalysisService {
     private final CodeAnalyzer analyzer;
 
     /**
-     * Repository for persisting {@link Review} entities containing code analysis results.
+     * Repository for persisting {@link Review} entities containing code analysis
+     * results.
      */
     private final ReviewRepository reviewRepository;
 
@@ -61,35 +67,44 @@ public class CodeAnalysisService {
     /**
      * Constructs a new {@code CodeAnalysisService} with injected dependencies.
      *
-     * @param analyzer          the AI code analyzer to use for generating feedback
-     * @param parsingService    service to extract metadata from code diffs
-     * @param reviewRepository  repository to persist review entities
+     * @param analyzer         the AI code analyzer to use for generating feedback
+     * @param parsingService   service to extract metadata from code diffs
+     * @param reviewRepository repository to persist review entities
      */
     public CodeAnalysisService(@Qualifier("codeAnalyzer") CodeAnalyzer analyzer,
-                               final ParsingService parsingService,
-                               final ReviewRepository reviewRepository) {
+            final ParsingService parsingService,
+            final ReviewRepository reviewRepository) {
         this.analyzer = analyzer;
         this.reviewRepository = reviewRepository;
         this.parsingService = parsingService;
     }
 
     /**
-     * Analyzes a given code diff asynchronously by sending it to the AI code analyzer.
-     * Once the analysis completes, a {@link Review} entity is created and saved containing
-     * the analysis feedback, diff content, extracted file path, and creation timestamp.
+     * Analyzes a given code diff asynchronously by sending it to the AI code
+     * analyzer.
+     * Once the analysis completes, a {@link Review} entity is created and saved
+     * containing
+     * the analysis feedback, diff content, extracted file path, and creation
+     * timestamp.
      *
      * @param filename    the name of the file being analyzed (used for context)
      * @param diffContent the unified diff text representing code changes
-     * @return a {@link CompletableFuture} that completes with the AI-generated feedback string
+     * @return a {@link CompletableFuture} that completes with the AI-generated
+     *         feedback string
      */
     public CompletableFuture<?> analyzeFile(String filename, String diffContent) {
         return analyzer.analyzeFile(filename, diffContent)
                 .thenApply(feedback -> {
-                    Review review = Review.builder()
+                    final var feedbackCast = (String) feedback;
+                    final var review = Review.builder()
                             .createdAt(Instant.now())
-                            .filePath(this.parsingService.extractFilePathFromDiff(diffContent))
+                            .fileName(filename)
+                            .prUrl(null)
+                            .pullRequestId(null)
+                            .issueFlag(null)
                             .diffContent(diffContent)
-                            .feedback((String) feedback)
+                            .feedback((String) feedbackCast)
+                            .severityScore((BigDecimal) this.determineSeverity(feedbackCast))
                             .build();
                     reviewRepository.save(review);
                     return feedback;
@@ -97,13 +112,16 @@ public class CodeAnalysisService {
     }
 
     /**
-     * Writes feedback for a specific pull request asynchronously to a configured file.
+     * Writes feedback for a specific pull request asynchronously to a configured
+     * file.
      * The feedback is appended with a timestamp and PR identifier.
-     * This method is non-blocking and exceptions during file writing are logged but not propagated.
+     * This method is non-blocking and exceptions during file writing are logged but
+     * not propagated.
      *
      * @param pullRequestId the unique identifier of the pull request
      * @param feedback      the feedback string to write to the file
-     * @return a {@link CompletableFuture} that completes when the write operation finishes
+     * @return a {@link CompletableFuture} that completes when the write operation
+     *         finishes
      */
     private CompletableFuture<Void> writeFeedbackToFile(String pullRequestId, String feedback) {
         return CompletableFuture.runAsync(() -> {
@@ -119,5 +137,25 @@ public class CodeAnalysisService {
                 // File writing is non-critical, so exceptions are swallowed.
             }
         });
+    }
+
+    /**
+     * A severity score to measure the issues found in the PR.
+     * Eventually, this will be displayed on a dashbaord on the UI.
+     * @param feedback - AI Generated Feedback
+     * @return
+     */
+    private BigDecimal determineSeverity(String feedback) {
+        feedback = feedback.toLowerCase();
+
+        if (feedback.contains("null pointer") || feedback.contains("security")) {
+            return BigDecimal.valueOf(0.9);
+        } else if (feedback.contains("performance") || feedback.contains("race condition")) {
+            return BigDecimal.valueOf(0.7);
+        } else if (feedback.contains("naming") || feedback.contains("style")) {
+            return BigDecimal.valueOf(0.3);
+        }
+
+        return BigDecimal.valueOf(0.2); // default medium severity
     }
 }
