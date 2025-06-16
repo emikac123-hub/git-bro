@@ -105,7 +105,7 @@ public class ChatGPTClient {
                     .post(body)
                     .build();
 
-            this.client.newCall(request).enqueue(new Callback() {
+            this.okClient.newCall(request).enqueue(new Callback() {
                 @Override
                 public void onFailure(Call call, IOException e) {
                     future.completeExceptionally(new RuntimeException("HTTP request failed: " + e.getMessage(), e));
