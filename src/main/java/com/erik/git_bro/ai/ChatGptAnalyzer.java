@@ -25,11 +25,6 @@ public class ChatGptAnalyzer implements CodeAnalyzer {
     }
 
     @Override
-    public String analyzeCode(List<String> chunkedInput) throws Exception {
-        return client.analyzeCode(chunkedInput);
-    }
-
-    @Override
     public String parseAiResponse(String aiJsonResponse) throws Exception {
         ObjectMapper mapper = new ObjectMapper();
 
@@ -54,8 +49,23 @@ public class ChatGptAnalyzer implements CodeAnalyzer {
     }
 
     @Override
-    public CompletableFuture<?> analyzeFile(String prompt) {
-        return this.client.analyzeFile(prompt);
+    public String analyzeFile(String filename, String diffContent) {
+        StringBuilder promptBuilder = new StringBuilder();
+        final var future = new CompletableFuture();
+        promptBuilder.append(String.format(
+                "Please review the following Git diff from file %s:\n\n%s\n\n",
+                filename,
+                diffContent));
+        promptBuilder.append("Additional Instructions:\n");
+        promptBuilder.append("- Evaluate code style and adherence to best practices.\n");
+        promptBuilder.append("- Identify any potential performance bottlenecks.\n");
+        promptBuilder.append(
+                "- Give a final recommendation if the code should be merged in. DO NOT recommend code be merged in if there are security issues.");
+        if (filename.endsWith(".java")) {
+            promptBuilder.append("- Ensure compliance with Java coding standards (e.g., naming conventions).\n");
+        }
+        String prompt = promptBuilder.toString();
+        return prompt
     }
 
 }

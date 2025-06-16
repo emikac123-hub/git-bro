@@ -55,8 +55,8 @@ public class CodeBertAnalyzer implements CodeAnalyzer {
     }
 
     @Override
-    public CompletableFuture<String> analyzeFile(String prompt) {
+    public String analyzeFile(String filename, String diffContent) {
     
-        return CompletableFuture.completedFuture(null);
+        return null;
     }
 }

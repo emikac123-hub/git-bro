@@ -27,13 +27,9 @@ spring:
       name: user
       password: password
 
-#Never commit this code! If you do, navigate to hugging face and generate a new token.
 huggingface:
-    api:
-        token: hf_iK3232323cXdqxWoQuUVep24323
-openai:
-    api:
-        token: sk-proj-QGI7z17KoSTg234234234234hlwekjh5234kjh23lk4hj23lkj4h23lkjh44z44eETnfYbCVvHj3U8iNL4A
+  api:
+    token: ${HUGGINGFACE_API_TOKEN}
 
 app:
   ai-provider: chatgpt

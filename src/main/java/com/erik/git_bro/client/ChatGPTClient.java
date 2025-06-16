@@ -9,9 +9,7 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.TimeUnit;
 
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Component;
-import org.springframework.web.servlet.tags.HtmlEscapeTag;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -44,44 +42,6 @@ public class ChatGPTClient {
     private final ObjectMapper objectMapper = new ObjectMapper();
     private static final String API_URL = "https://api.openai.com/v1/chat/completions";
 
-    public String analyzeCode(List<String> chunks) throws Exception {
-        List<ChatMessage> messages = new ArrayList<>();
-
-        OkHttpClient okClient = new OkHttpClient();
-        log.info("The chunks: {}", chunks);
-        // Add the system message
-        messages.add(new ChatMessage("system", "You are a senior software engineer reviewing code diffs."));
-
-        // Add each diff chunk as a separate user message
-        for (String chunk : chunks) {
-            messages.add(new ChatMessage("user", "Please review this diff! :\n" + chunk));
-        }
-
-        // Build the request body map
-        Map<String, Object> payloadMap = new HashMap<>();
-        payloadMap.put("model", "gpt-4o");
-        payloadMap.put("temperature", 0.2);
-        payloadMap.put("messages", messages);
-
-        // Serialize to JSON
-        String payloadJson = objectMapper.writeValueAsString(payloadMap);
-
-        log.info("The payload: {}", payloadMap);
-        RequestBody body = RequestBody.create(payloadJson, MediaType.get("application/json"));
-
-        Request request = new Request.Builder()
-                .url(API_URL)
-                .header("Authorization", "Bearer " + apiKey)
-                .post(body)
-                .build();
-
-        try (Response response = okClient.newCall(request).execute()) {
-            if (!response.isSuccessful()) {
-                throw new IOException("API request failed: " + response.body().string());
-            }
-            return response.body().string();
-        }
-    }
 
     public CompletableFuture<String> analyzeFile(String prompt) {
         CompletableFuture<String> future = new CompletableFuture<>();
@@ -92,7 +52,7 @@ public class ChatGPTClient {
                     "messages", List.of(
                             Map.of("role", "system", "content", "You are a senior code reviewer."),
                             Map.of("role", "user", "content", prompt)),
-                    "temperature", 0.2));
+                    "temperature", 0.3));
 
             RequestBody body = RequestBody.create(
                     json,
