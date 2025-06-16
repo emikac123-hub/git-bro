@@ -49,22 +49,8 @@ public class ChatGptAnalyzer implements CodeAnalyzer {
     }
 
     @Override
-    public String analyzeFile(String filename, String diffContent) {
-        StringBuilder promptBuilder = new StringBuilder();
-        final var future = new CompletableFuture();
-        promptBuilder.append(String.format(
-                "Please review the following Git diff from file %s:\n\n%s\n\n",
-                filename,
-                diffContent));
-        promptBuilder.append("Additional Instructions:\n");
-        promptBuilder.append("- Evaluate code style and adherence to best practices.\n");
-        promptBuilder.append("- Identify any potential performance bottlenecks.\n");
-        promptBuilder.append(
-                "- Give a final recommendation if the code should be merged in. DO NOT recommend code be merged in if there are security issues.");
-        if (filename.endsWith(".java")) {
-            promptBuilder.append("- Ensure compliance with Java coding standards (e.g., naming conventions).\n");
-        }
-        return promptBuilder.toString();
+    public CompletableFuture<String> analyzeFile(String filename, String diffContent) {
+        return client.analyzeFile(filename, diffContent);
     }
 
 }

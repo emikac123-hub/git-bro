@@ -9,5 +9,5 @@ import org.springframework.context.annotation.Primary;
 public interface CodeAnalyzer {
     static final String NO_ISSUES = "No issues detected.";
     String parseAiResponse(String rawResponse) throws Exception;
-    String analyzeFile(String filename, String diffContent);
+    CompletableFuture<String> analyzeFile(String filename, String diffContent);
 }

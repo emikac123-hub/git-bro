@@ -36,15 +36,12 @@ public class CodeReviewController {
     @PostMapping(value = "/analyze-file", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public CompletableFuture<ResponseEntity<?>> analyzeFromFile(
             @RequestParam("file") MultipartFile file) throws IOException {
-
         String diff = new String(file.getBytes(), StandardCharsets.UTF_8);
-
         return codeAnalysisService.analyzeFile(file.getOriginalFilename(), diff)
                 .handle((review, throwable) -> {
                     if (throwable == null) {
                         return ResponseEntity.ok().body(review);
                     }
-
                     Throwable cause = throwable.getCause() != null ? throwable.getCause() : throwable;
                     log.error("Code analysis failed", cause);
 
@@ -60,5 +57,4 @@ public class CodeReviewController {
                     return ResponseEntity.status(500).body(error);
                 });
     }
-
 }

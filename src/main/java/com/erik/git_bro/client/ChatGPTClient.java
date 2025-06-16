@@ -42,20 +42,25 @@ public class ChatGPTClient {
     private final ObjectMapper objectMapper = new ObjectMapper();
     private static final String API_URL = "https://api.openai.com/v1/chat/completions";
 
-
-    public CompletableFuture<String> analyzeFile(String prompt) {
+    public CompletableFuture<String> analyzeFile(String filename, String diffContent) {
         CompletableFuture<String> future = new CompletableFuture<>();
 
         try {
-            String json = objectMapper.writeValueAsString(Map.of(
-                    "model", "gpt-4o",
-                    "messages", List.of(
-                            Map.of("role", "system", "content", "You are a senior code reviewer."),
-                            Map.of("role", "user", "content", prompt)),
-                    "temperature", 0.3));
-
+            StringBuilder promptBuilder = new StringBuilder();
+            promptBuilder.append(String.format(
+                    "Please review the following Git diff from file %s:\n\n%s\n\n",
+                    filename,
+                    diffContent));
+            promptBuilder.append("Additional Instructions:\n");
+            promptBuilder.append("- Evaluate code style and adherence to best practices.\n");
+            promptBuilder.append("- Identify any potential performance bottlenecks.\n");
+            promptBuilder.append(
+                    "- Give a final recommendation if the code should be merged in. DO NOT recommend code be merged in if there are security issues.");
+            if (filename.endsWith(".java")) {
+                promptBuilder.append("- Ensure compliance with Java coding standards (e.g., naming conventions).\n");
+            }
             RequestBody body = RequestBody.create(
-                    json,
+                    diffContent,
                     MediaType.parse("application/json"));
 
             Request request = new Request.Builder()
