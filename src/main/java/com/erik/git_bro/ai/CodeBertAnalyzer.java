@@ -19,10 +19,6 @@ public class CodeBertAnalyzer implements CodeAnalyzer {
         this.client = client;
     }
 
-    @Override
-    public String analyzeCode(List<String> chunkedInput) throws Exception {
-        return client.analyzeCode(chunkedInput);
-    }
 
     @Override
     public String parseAiResponse(String rawResponse) {
@@ -55,7 +51,7 @@ public class CodeBertAnalyzer implements CodeAnalyzer {
     }
 
     @Override
-    public String analyzeFile(String filename, String diffContent) {
+    public CompletableFuture<String> analyzeFile(String filename, String diffContent) {
     
         return null;
     }

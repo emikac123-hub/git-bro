@@ -60,11 +60,11 @@ public class ChatGPTClient {
                 promptBuilder.append("- Ensure compliance with Java coding standards (e.g., naming conventions).\n");
             }
             RequestBody body = RequestBody.create(
-                    diffContent,
+                    promptBuilder.toString(),
                     MediaType.parse("application/json"));
 
             Request request = new Request.Builder()
-                    .url("https://api.openai.com/v1/chat/completions")
+                    .url(API_URL)
                     .header("Authorization", "Bearer " + System.getenv("OPENAI_API_KEY"))
                     .header("Content-Type", "application/json")
                     .post(body)
