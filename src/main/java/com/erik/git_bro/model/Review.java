@@ -9,6 +9,8 @@ import java.time.Instant;
 
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
+import jakarta.persistence.GeneratedValue;
+import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.Lob;
 import jakarta.persistence.NamedEntityGraph;
@@ -26,7 +28,8 @@ import lombok.Data;
 public class Review {
 
     @Id
-    private String reviewId; // PR-Number + TimeStamp
+    @GeneratedValue(strategy = GenerationType.IDENTITY) // or AUTO, SEQUENCE depending on DB
+    private Long id;
     private String pullRequestId;
     private String filePath;
     @Lob

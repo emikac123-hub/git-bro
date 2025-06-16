@@ -21,6 +21,7 @@ import com.erik.git_bro.model.ErrorResponse;
 import com.erik.git_bro.model.Review;
 import com.erik.git_bro.repository.ReviewRepository;
 import com.erik.git_bro.service.CodeAnalysisService;
+import com.erik.git_bro.service.ParsingService;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -31,12 +32,13 @@ import lombok.extern.slf4j.Slf4j;
 public class CodeReviewController {
 
     private final ReviewRepository reviewRepository;
-
+    private final ParsingService parsingService;
     CodeAnalysisService codeAnalysisService;
 
-    CodeReviewController(CodeAnalysisService codeAnalysisService, ReviewRepository reviewRepository) {
+    CodeReviewController(CodeAnalysisService codeAnalysisService, ReviewRepository reviewRepository, final ParsingService parsingService) {
         this.codeAnalysisService = codeAnalysisService;
         this.reviewRepository = reviewRepository;
+        this.parsingService = parsingService;
     }
 
     @PostMapping(value = "/analyze-file", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
@@ -50,7 +52,7 @@ public class CodeReviewController {
                     if (throwable == null) {
                         final var review = Review.builder()
                         .createdAt(Instant.now())
-                        .filePath(file.getOriginalFilename())
+                        .filePath(this.parsingService.extractFilePathFromDiff(diff))
                         .diffContent(diff)
                         .feedback((String) feedback)
                         .build();
