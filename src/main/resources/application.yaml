@@ -30,7 +30,9 @@ spring:
 huggingface:
   api:
     token: ${HUGGINGFACE_API_TOKEN}
-
+openai:
+  api:
+    token: ${OPENAI_API_TOKEN}
 app:
   ai-provider: chatgpt
   feedback:

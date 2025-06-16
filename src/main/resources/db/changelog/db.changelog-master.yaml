@@ -1,27 +1,24 @@
 databaseChangeLog:
   - changeSet:
       id: 1
-      author: emikac
+      author: erikmikac
       changes:
         - createTable:
             tableName: review
             columns:
               - column:
-                  name: review_id
-                  type: VARCHAR(255)
+                  name: id
+                  type: UUID
                   constraints:
                     primaryKey: true
                     nullable: false
               - column:
-                  name: pull_request_id
-                  type: VARCHAR(255)
-                  constraints:
-                    nullable: false
+                  name: created_at
+                  type: TIMESTAMP
+                  defaultValueComputed: CURRENT_TIMESTAMP
               - column:
                   name: file_path
-                  type: VARCHAR(1024)
-                  constraints:
-                    nullable: false
+                  type: VARCHAR(512)
               - column:
                   name: diff_content
                   type: CLOB
@@ -29,5 +26,18 @@ databaseChangeLog:
                   name: feedback
                   type: CLOB
               - column:
-                  name: created_at
-                  type: TIMESTAMP
+                  name: model_used
+                  type: VARCHAR(100)
+              - column:
+                  name: user_id
+                  type: VARCHAR(100)
+              - column:
+                  name: pr_url
+                  type: VARCHAR(2048)
+              - column:
+                  name: issue_flag
+                  type: BOOLEAN
+                  defaultValueBoolean: false
+              - column:
+                  name: severity_score
+                  type: DECIMAL(3,2)

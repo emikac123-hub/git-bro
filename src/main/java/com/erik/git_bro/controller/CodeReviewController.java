@@ -20,7 +20,8 @@ import lombok.extern.slf4j.Slf4j;
 /**
  * REST controller that handles code review requests.
  * <p>
- * Provides an endpoint to receive a file containing code diffs and analyze them asynchronously using
+ * Provides an endpoint to receive a file containing code diffs and analyze them
+ * asynchronously using
  * a code analysis service.
  * </p>
  */
@@ -32,9 +33,11 @@ public class CodeReviewController {
     private final CodeAnalysisService codeAnalysisService;
 
     /**
-     * Constructs a new {@code CodeReviewController} with the given {@link CodeAnalysisService}.
+     * Constructs a new {@code CodeReviewController} with the given
+     * {@link CodeAnalysisService}.
      *
-     * @param codeAnalysisService the service used to perform asynchronous code analysis
+     * @param codeAnalysisService the service used to perform asynchronous code
+     *                            analysis
      */
     public CodeReviewController(CodeAnalysisService codeAnalysisService) {
         this.codeAnalysisService = codeAnalysisService;
@@ -43,21 +46,27 @@ public class CodeReviewController {
     /**
      * Analyzes the contents of a file asynchronously.
      * <p>
-     * Accepts a multipart form upload with a file parameter named "file". The file contents are read
-     * as a UTF-8 string representing a code diff. The diff is then passed to the {@code CodeAnalysisService}
+     * Accepts a multipart form upload with a file parameter named "file". The file
+     * contents are read
+     * as a UTF-8 string representing a code diff. The diff is then passed to the
+     * {@code CodeAnalysisService}
      * for asynchronous analysis.
      * </p>
      * <p>
-     * The method returns a {@link CompletableFuture} that resolves to an HTTP response:
+     * The method returns a {@link CompletableFuture} that resolves to an HTTP
+     * response:
      * <ul>
-     *   <li>{@code 200 OK} with the analysis feedback if successful</li>
-     *   <li>{@code 400 Bad Request} with an {@link ErrorResponse} if the analysis failed due to invalid input</li>
-     *   <li>{@code 500 Internal Server Error} with an {@link ErrorResponse} for other failures</li>
+     * <li>{@code 200 OK} with the analysis feedback if successful</li>
+     * <li>{@code 400 Bad Request} with an {@link ErrorResponse} if the analysis
+     * failed due to invalid input</li>
+     * <li>{@code 500 Internal Server Error} with an {@link ErrorResponse} for other
+     * failures</li>
      * </ul>
      * </p>
      *
      * @param file the multipart uploaded file containing the code diff to analyze
-     * @return a {@link CompletableFuture} that resolves to a {@link ResponseEntity} containing
+     * @return a {@link CompletableFuture} that resolves to a {@link ResponseEntity}
+     *         containing
      *         the analysis result or error information
      * @throws IOException if reading the uploaded file bytes fails
      */
