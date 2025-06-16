@@ -42,7 +42,7 @@ jobs:
 
           echo "Raw response: $response"
 
-          feedback=$(echo "$response" | jq -r '.feedback // empty')
+          feedback="$response"
 
           {
             echo "feedback<<EOF"
