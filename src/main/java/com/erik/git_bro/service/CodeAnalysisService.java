@@ -1,79 +1,82 @@
 package com.erik.git_bro.service;
 
 import java.io.IOException;
+import java.net.URI;
+import java.net.http.HttpResponse;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.StandardOpenOption;
 import java.time.Instant;
-import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
-import java.util.stream.Collectors;
 
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 
-import com.erik.git_bro.client.CodeBertClient;
+import com.erik.git_bro.ai.CodeAnalyzer;
 import com.erik.git_bro.model.Review;
 import com.erik.git_bro.repository.ReviewRepository;
 import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
-import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import okhttp3.Call;
+import okhttp3.Callback;
+import okhttp3.MediaType;
+import okhttp3.OkHttpClient;
+import okhttp3.Request;
+import okhttp3.RequestBody;
+import okhttp3.Response;
+import okhttp3.ResponseBody;
 
 @Service
-@RequiredArgsConstructor
+
 @Slf4j
 public class CodeAnalysisService {
+    private final ParsingService parsingService;
     @Value("${app.feedback.file-path}")
     private String feedbackFilePath;
-    private final CodeBertClient codeBertClient;
     private final ReviewRepository reviewRepository;
-    private final ObjectMapper objectMapper = new ObjectMapper();
-    private static final int CHUNK_SIZE = 200;
-    private static final int freeTierAPILimit = 20;
+    private final CodeAnalyzer analyzer;
 
-    private static final String NO_ISSUES = "No issues detected.";
+
+    public CodeAnalysisService(@Qualifier("codeAnalyzer") CodeAnalyzer analyzer,
+            ReviewRepository reviewRepository,
+            final ParsingService parsingService) {
+        this.analyzer = analyzer;
+        this.reviewRepository = reviewRepository;
+        this.parsingService = parsingService;
+    }
+
+    public CompletableFuture<?> analyzeFile(String filename, String diffContent) {
+        String prompt = String.format("Please review the following Git diff from file %s:\n\n%s", filename,
+                diffContent);
+
+        return analyzer.analyzeFile(prompt);
+    }
+
     @Async("virtualThreadExecutor")
-    public CompletableFuture<Object> analyzeDiff(final String pullRequestId, final String filePath,
-            final String diffContent) {
+    public CompletableFuture<?> analyzeDiff(final String pullRequestId,
+            final String rawDiffContent) {
         try {
-            if (pullRequestId == null || filePath == null || diffContent == null) {
+            final var parseJSON = rawDiffContent;
+            final var filePath = this.parsingService.extractFilePathFromDiff(rawDiffContent);
+
+            log.info("raw content: {}", rawDiffContent);
+            if (pullRequestId == null || rawDiffContent == null) {
                 throw new IllegalArgumentException("Input parameters cannot be null");
             }
+            final var diffContent = this.parsingService.filterAndExtractDiffLines(parseJSON);
+            log.info("diffcontent: {}", diffContent);
+            List<String> chunks = this.parsingService.splitDiffIntoChunks(diffContent, 1000);
+            log.info("chunks: {}", chunks);
+            String feedback = this.analyzer.analyzeCode(chunks);
 
-            List<String> chunks = this.chunkItUp(diffContent);
-            if (chunks.size() > freeTierAPILimit) {
-                int overFlow = chunks.size() - freeTierAPILimit;
-                while (overFlow > 0) {
-                    chunks.removeLast();
-                    --overFlow;
-                }
-            }
-            log.info("Split diffContent for PR {} into {} chunks", pullRequestId, chunks.size());
-
-            List<String> feedbacks = chunks.stream()
-                    .map(chunk -> {
-
-                        try {
-                   
-                            System.out.println(chunk);
-                            final String feedback = codeBertClient.analyzeCode(chunk);
-                            return parseAiResponse(feedback);
-                        } catch (final IOException e) {
-                            log.error("Failed to process chunk for PR {}: {}.", pullRequestId, e.getMessage());
-                            return "Error analyzing chunk";
-                        }
-                    })
-                    .filter(fb -> !fb.equals("Nothing significant issues found") && !fb.equals(NO_ISSUES))
-                    .distinct()
-                    .collect(Collectors.toList());
-            // Aggregate feedback
-            String feedback = feedbacks.isEmpty() ? "No significant issues detected" : String.join("; ", feedbacks);
             writeFeedbackToFile(pullRequestId, feedback);
             log.info("The Actual Feedback");
             log.info(feedback);
@@ -82,66 +85,13 @@ public class CodeAnalysisService {
             review.setPullRequestId(pullRequestId);
             review.setFilePath(filePath);
             review.setDiffContent(diffContent);
-            review.setFeedback(feedback);
+            review.setFeedback(this.analyzer.parseAiResponse(feedback));
             review.setCreatedAt(Instant.now().toString());
 
             return CompletableFuture.completedFuture(reviewRepository.save(review));
         } catch (final Exception e) {
             return CompletableFuture.failedFuture(e);
         }
-    }
-
-    private List<String> chunkItUp(final String diffContent) throws JsonProcessingException {
-        List<String> chunks = new ArrayList<>();
-        for (int i = 0; i < diffContent.length(); i += CHUNK_SIZE) {
-            String chunk = diffContent.substring(i, Math.min(i + CHUNK_SIZE, diffContent.length()));
-            chunk = chunk.length() > CHUNK_SIZE ? chunk.substring(0, CHUNK_SIZE) : chunk;
-            String escapedChunk = objectMapper.writeValueAsString(chunk); 
-            log.debug("json payload: {}", escapedChunk);
-            chunks.add(cleanChunk(escapedChunk));
-        }
-        return chunks;
-    }
-
-    private String parseAiResponse(final String rawResponse) {
-        try {
-            final List<List<Double>> embeddings = objectMapper.readValue(rawResponse,
-                    new TypeReference<List<List<Double>>>() {
-                    });
-
-            log.info("Parsed {} embedding vectors, each with {} dimensions",
-                    embeddings.size(), embeddings.isEmpty() ? 0 : embeddings.get(0).size());
-            // Compute mean of each vector for simple analysis
-            List<Double> vectorMeans = embeddings.stream()
-                    .map(vector -> vector.stream()
-                            .mapToDouble(Double::doubleValue)
-                            .average()
-                            .orElse(0.0))
-                    .collect(Collectors.toList());
-
-            // Simple heuristic: high mean in any vector suggests an issue
-
-            double maxMean = vectorMeans.stream()
-                    .mapToDouble(Double::doubleValue)
-                    .max()
-                    .orElse(0.0);
-            List<String> issues = new ArrayList<>();
-
-            if (maxMean > 0.1) {
-                issues.add("Possible null pointer exception.");
-            }
-            if (embeddings.size() > 1 && vectorMeans.get(1) > 0.05) {
-                issues.add("Style violation detected.");
-            }
-            return issues.isEmpty() ? NO_ISSUES : String.join("; ", issues);
-        } catch (JsonProcessingException e) {
-            log.error("Failed to parse CodeBERT response: {}", e.getMessage());
-            return "Error analyzing code: Unable to parse AI response";
-        } catch (Exception e) {
-            log.error("Unexpected error parsing CodeBERT response: {}", e.getMessage());
-            return "Error analyzing code: Unexpected issue.";
-        }
-
     }
 
     private CompletableFuture<Void> writeFeedbackToFile(String pullRequestId, String feedback) {
@@ -158,10 +108,6 @@ public class CodeAnalysisService {
                 // Don't throw; file writing is non-critical
             }
         });
-    }
-
-    private String cleanChunk(String chunk) {
-        return chunk.replaceAll("[\\p{Cntrl}&&[^\r\n\t]]", ""); // Remove illegal control characters
     }
 
 }

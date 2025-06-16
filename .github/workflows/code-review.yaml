@@ -1,73 +1,70 @@
 name: Ai Code Review Assistant
+
 on:
-    pull_request:
-        types: [opened, synchronize, reopened]
+  pull_request:
+    types: [opened, synchronize, reopened]
+
 permissions:
   pull-requests: write
   contents: read
   issues: write
+
 jobs:
-    code-review:
-        runs-on: ubuntu-latest
-        steps:
-            # Check out the repo to access the PR diff
-            - name: Checkout code
-              uses: actions/checkout@v4
-            - name: Get PR Diff
-              id: get-diff
-              run: |
-                curl -s -H "Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" \
-                    -H "Accept: application/vnd.github.v3.diff" \
-                    https://api.github.com/repos/${{ github.repository }}/pulls/${{ github.event.pull_request.number }} \
-                    -o pr.diff
+  code-review:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
 
-                diff_base64=$(base64 < pr.diff | tr -d '\n')
-                echo "diff_content=$diff_base64" >> "$GITHUB_OUTPUT"
+      - name: Get PR Diff
+        id: get-diff
+        run: |
+          curl -s -H "Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" \
+              -H "Accept: application/vnd.github.v3.diff" \
+              https://api.github.com/repos/${{ github.repository }}/pulls/${{ github.event.pull_request.number }} \
+              -o pr.diff
 
+      - name: Upload PR Diff Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: pr-diff
+          path: pr.diff
 
-            - name: Upload PR Diff Artifact
-              uses: actions/upload-artifact@v4
-              with:
-                name: pr-diff
-                path: pr.diff
-            # Call the Code Review Assistant API
-            - name: Call Code Review API
-              id: call-api
-              env:
-                API_URL: https://1fe1-149-154-20-92.ngrok-free.app/api/review/analyze
-                HUGGINGFACE_API_TOKEN: ${{ secrets.HUGGINGFACE_API_TOKEN }}
-              run: |
-                # POST the raw diff file produced in the previous step
-                echo "Decoded diff:"
-                echo "$(echo ${{ steps.get-diff.outputs.diff_content }} | base64 -d)"
-                response=$(
-                  curl -s -v -u user:password -X POST \
-                      "$API_URL?pullRequestId=${{ github.event.pull_request.number }}&filePath=src/Main.java" \
-                      -H "Content-Type: application/json" \
-                      --data-binary @pr.diff
-                )
-                echo "Response..."
-                echo "$response" | jq
-                echo "AGAIN...."
-                echo "feedback=$(echo "$response" | jq -r '.feedback')" >> "$GITHUB_OUTPUT"
+      - name: Call Code Review API (multipart/form-data)
+        id: call-api
+        env:
+          API_URL: https://c8c4-149-154-20-92.ngrok-free.app/api/review/analyze-file
+        run: |
+          echo "Sending PR diff as file to $API_URL"
 
-            - name: Post AI Feedback as Comment
-              uses: actions/github-script@v7
-              with:
-                github-token: ${{ secrets.GITHUB_TOKEN }}
-                script: |
-                  const feedback = `${{ steps.call-api.outputs.feedback }}`;
-                  if (!feedback || feedback.trim() === "") {
-                    console.log("No feedback to post.");
-                    return;
-                  }
+          response=$(curl -s -v -u user:password -X POST "$API_URL" \
+            -F "file=@pr.diff;type=text/plain")
 
-                  await github.rest.issues.createComment({
-                    owner: context.repo.owner,
-                    repo: context.repo.repo,
-                    issue_number: context.issue.number,
-                    body: `🤖 AI Code Review:\n\n${feedback}`
-                  });
+          echo "Raw response: $response"
 
-                    
-        
+          feedback="$response"
+
+          {
+            echo "feedback<<EOF"
+            echo "$feedback"
+            echo "EOF"
+          } >> "$GITHUB_OUTPUT"
+
+      - name: Post AI Feedback as Comment
+        uses: actions/github-script@v7
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            const feedback = ${{ toJson(steps.call-api.outputs.feedback) }};
+
+            if (!feedback || feedback.trim() === "") {
+              console.log("No feedback to post.");
+              return;
+            }
+
+            await github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.issue.number,
+              body: feedback
+            });

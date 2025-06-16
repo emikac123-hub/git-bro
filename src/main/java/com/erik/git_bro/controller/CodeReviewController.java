@@ -1,13 +1,20 @@
 package com.erik.git_bro.controller;
 
+import java.io.IOException;
+import java.nio.charset.StandardCharsets;
+import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
 
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.multipart.MultipartFile;
 
 import com.erik.git_bro.model.ErrorResponse;
 import com.erik.git_bro.service.CodeAnalysisService;
@@ -17,35 +24,41 @@ import lombok.extern.slf4j.Slf4j;
 
 @RestController
 @RequestMapping("/api/review")
-@RequiredArgsConstructor
 @Slf4j
 public class CodeReviewController {
 
-    private final CodeAnalysisService codeAnalysisService;
+    CodeAnalysisService codeAnalysisService;
 
-    @PostMapping("/analyze")
-    public CompletableFuture<ResponseEntity<Object>> analyzeCode(
-            @RequestParam String pullRequestId,
-            @RequestParam String filePath,
-            @RequestBody String diffContent) {
-        log.info("Received review request for PR {} and file {}. Diff length: {}", pullRequestId, filePath,
-                diffContent.length());
-        return codeAnalysisService.analyzeDiff(pullRequestId, filePath, diffContent)
-                .thenApply(review -> ResponseEntity.ok(review))
-                .exceptionally(throwable -> {
+    CodeReviewController(CodeAnalysisService codeAnalysisService) {
+        this.codeAnalysisService = codeAnalysisService;
+    }
+
+    @PostMapping(value = "/analyze-file", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    public CompletableFuture<ResponseEntity<?>> analyzeFromFile(
+            @RequestParam("file") MultipartFile file) throws IOException {
+
+        String diff = new String(file.getBytes(), StandardCharsets.UTF_8);
+
+        return codeAnalysisService.analyzeFile(file.getOriginalFilename(), diff)
+                .handle((review, throwable) -> {
+                    if (throwable == null) {
+                        return ResponseEntity.ok().body(review);
+                    }
+
                     Throwable cause = throwable.getCause() != null ? throwable.getCause() : throwable;
-                    // Replace with SLF4J logging in production
-                    log.info("ERROR");
-                    final var error = ErrorResponse.builder()
-                            .message(cause.getMessage())
-                            .details(cause.getStackTrace().toString())
-                            .build();
-                    if (cause instanceof IllegalArgumentException) {
+                    log.error("Code analysis failed", cause);
 
+                    var error = ErrorResponse.builder()
+                            .message(cause.getMessage())
+                            .details(cause.getCause() != null ? cause.getCause().getLocalizedMessage() : "")
+                            .build();
+
+                    if (cause instanceof IllegalArgumentException) {
                         return ResponseEntity.badRequest().body(error);
                     }
-                    log.info(cause.getMessage());
-                    return ResponseEntity.status(500).body(null);
+
+                    return ResponseEntity.status(500).body(error);
                 });
     }
+
 }

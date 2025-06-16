@@ -1,0 +1,33 @@
+databaseChangeLog:
+  - changeSet:
+      id: 1
+      author: emikac
+      changes:
+        - createTable:
+            tableName: review
+            columns:
+              - column:
+                  name: review_id
+                  type: VARCHAR(255)
+                  constraints:
+                    primaryKey: true
+                    nullable: false
+              - column:
+                  name: pull_request_id
+                  type: VARCHAR(255)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: file_path
+                  type: VARCHAR(1024)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: diff_content
+                  type: CLOB
+              - column:
+                  name: feedback
+                  type: CLOB
+              - column:
+                  name: created_at
+                  type: VARCHAR(255)

@@ -32,3 +32,10 @@ build/
 ### VS Code ###
 .vscode/
 src/main/resources/application-secrets.yaml
+src/main/java/com/erik/.DS_Store
+src/.DS_Store
+src/main/.DS_Store
+src/main/java/.DS_Store
+src/main/java/com/.DS_Store
+src/main/java/com/erik/git_bro/.DS_Store
+.DS_Store

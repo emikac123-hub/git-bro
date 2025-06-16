@@ -1,63 +1,56 @@
-# Read Me First
-The following was discovered as part of building this project:
+# Git-Bro: GitHub PR AI Code Reviewer
 
-* The original package name 'com.erik.git-bro' is invalid and this project uses 'com.erik.git_bro' instead.
+**Git-Bro** is a Spring Boot application that performs automated code review on GitHub pull requests using AI models like CodeBERT or ChatGPT. It ingests git diffs, analyzes them chunk-by-chunk, and returns meaningful feedback about potential bugs, style violations, or other code issues.
 
-# Getting Started
+---
 
-### Reference Documentation
-For further reference, please consider the following sections:
+## Features
 
-* [Official Apache Maven documentation](https://maven.apache.org/guides/index.html)
-* [Spring Boot Maven Plugin Reference Guide](https://docs.spring.io/spring-boot/3.5.0/maven-plugin)
-* [Create an OCI image](https://docs.spring.io/spring-boot/3.5.0/maven-plugin/build-image.html)
-* [Spring Web](https://docs.spring.io/spring-boot/3.5.0/reference/web/servlet.html)
-* [Spring Data JPA](https://docs.spring.io/spring-boot/3.5.0/reference/data/sql.html#data.sql.jpa-and-spring-data)
-* [Spring Security](https://docs.spring.io/spring-boot/3.5.0/reference/web/spring-security.html)
-* [Spring Boot Actuator](https://docs.spring.io/spring-boot/3.5.0/reference/actuator/index.html)
-* [Spring Boot DevTools](https://docs.spring.io/spring-boot/3.5.0/reference/using/devtools.html)
+-  Git diff ingestion and chunking  
+-  AI-powered code analysis using CodeBERT (or plug in ChatGPT)  
+-  Persistence via Spring Data JPA (H2 in-memory DB)  
+-  Asynchronous processing using virtual threads  
+-  Feedback is saved to disk for auditing  
+-  Pluggable AI client architecture for CodeBERT, OpenAI, or others  
 
-### Guides
-The following guides illustrate how to use some features concretely:
+---
 
-* [Building a RESTful Web Service](https://spring.io/guides/gs/rest-service/)
-* [Serving Web Content with Spring MVC](https://spring.io/guides/gs/serving-web-content/)
-* [Building REST services with Spring](https://spring.io/guides/tutorials/rest/)
-* [Accessing Data with JPA](https://spring.io/guides/gs/accessing-data-jpa/)
-* [Securing a Web Application](https://spring.io/guides/gs/securing-web/)
-* [Spring Boot and OAuth2](https://spring.io/guides/tutorials/spring-boot-oauth2/)
-* [Authenticating a User with LDAP](https://spring.io/guides/gs/authenticating-ldap/)
-* [Building a RESTful Web Service with Spring Boot Actuator](https://spring.io/guides/gs/actuator-service/)
+## 📁 Project Structure
 
-### Maven Parent overrides
-
-Due to Maven's design, elements are inherited from the parent POM to the project POM.
-While most of the inheritance is fine, it also inherits unwanted elements like `<license>` and `<developers>` from the parent.
-To prevent this, the project POM contains empty overrides for these elements.
-If you manually switch to a different parent and actually want the inheritance, you need to remove those overrides.
+src
+├── main
+│ ├── java/com/erik/git_bro
+│ │ ├── client # AI clients (e.g., CodeBERT)
+│ │ ├── config # Async executor config
+│ │ ├── controller # REST API
+│ │ ├── model # JPA entities
+│ │ ├── repository # Spring Data Repositories
+│ │ └── service # Core logic (diff parsing, feedback generation)
+│ └── resources
+│ ├── application.yaml
+│ └── db/changelog # Liquibase changelogs
 
 
-# Tech Stack
+---
 
-* Minikube
-* Docker 
-* Java Spring Boot
-* Java 21
-* AI Model - Use CodeBERT (via Hugging Face’s Java-compatible libraries) for code analysis, as it’s lightweight and pre-trained for code tasks. Alternatively, use Azure AI Text Analytics for simpler integration, leveraging your Azure experience.
-* Database - H2 for testing, with JPA for persistence.
+## 🔧 Configuration
 
-* Concurrency - Use Virtual Threads for handling multiple PR requests efficiently.
+### `application.yaml`
 
-* Security - Basic API key authentication (Spring Security) to prevent unauthorized access.
+```yaml
+spring:
+  datasource:
+    url: jdbc:h2:mem:codereview
+  jpa:
+    show-sql: true
+  liquibase:
+    change-log: classpath:db/changelog/db.changelog-master.yaml
 
+huggingface:
+  api:
+    token: YOUR_HUGGINGFACE_TOKEN
 
-# MVP Definition
-
-Receive Code Diffs: Accept PR diff data via a REST API (e.g., from GitHub webhooks).
-
-Analyze Code: Use an AI model to detect issues (e.g., style violations, potential bugs).
-
-Generate Feedback: Return review comments as JSON (later used by the GitHub Action).
-
-Store Metadata: Save review history in a database for tracking (optional for MVP).
-
+app:
+  feedback:
+    file-path: /path/to/code-review-feedback.txt
+```

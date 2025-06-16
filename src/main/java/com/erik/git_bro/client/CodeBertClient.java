@@ -1,6 +1,7 @@
 package com.erik.git_bro.client;
 
 import java.io.IOException;
+import java.util.List;
 import java.util.Map;
 
 import org.springframework.beans.factory.annotation.Value;
@@ -18,14 +19,18 @@ import okhttp3.Response;
 
 @Component
 @Slf4j
-public class CodeBertClient {
+public class CodeBertClient  {
     @Value("${huggingface.api.token}")
     private String huggingfaceToken;
     private final OkHttpClient client = new OkHttpClient();
-    private static final String API_URL = "https://api-inference.huggingface.co/models/microsoft/codebert-base";
+    private final ObjectMapper objectMapper = new ObjectMapper();
 
-    public String analyzeCode(String codeSnippet) throws IOException {
-        Map<String, String> payloadMap = Map.of("inputs", codeSnippet);
+    private static final String API_URL = "https://api-inference.huggingface.co/models/microsoft/codebert-base";
+ 
+
+
+    public String analyzeCode(List<String> codeSnippet) throws IOException {
+        Map<String, String> payloadMap = Map.of("inputs", objectMapper.writeValueAsString(codeSnippet));
         String jsonPayload = new ObjectMapper().writeValueAsString(payloadMap);
         final var body = RequestBody.create(
                 jsonPayload,
@@ -37,6 +42,7 @@ public class CodeBertClient {
                 .post(body)
                 .build();
 
+        log.info("Here is the Request: {}", request.body());
         try (Response response = client.newCall(request).execute()) {
             if (!response.isSuccessful()) {
                 String errorBody = response.body() != null ? response.body().string() : "No response body";
@@ -48,6 +54,7 @@ public class CodeBertClient {
             return responseBody;
         }
     }
+
 
     @PostConstruct
     public void init() {
