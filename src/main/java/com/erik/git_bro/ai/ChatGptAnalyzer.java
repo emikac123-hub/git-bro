@@ -2,6 +2,7 @@ package com.erik.git_bro.ai;
 
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.TimeUnit;
 
 import org.springframework.stereotype.Component;
 
@@ -11,14 +12,18 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 
 import okhttp3.OkHttpClient;
 
-
 @Component("chatGptAnalyzer")
 public class ChatGptAnalyzer implements CodeAnalyzer {
 
     private final ChatGPTClient client;
     private final ObjectMapper objectMapper = new ObjectMapper();
 
-    private final OkHttpClient okClient = new OkHttpClient();
+    OkHttpClient okClient = new OkHttpClient.Builder()
+            .connectTimeout(30, TimeUnit.SECONDS)
+            .writeTimeout(30, TimeUnit.SECONDS)
+            .readTimeout(180, TimeUnit.SECONDS)
+            .build();
+
     public ChatGptAnalyzer(ChatGPTClient client) {
         this.client = client;
     }
@@ -52,11 +57,9 @@ public class ChatGptAnalyzer implements CodeAnalyzer {
         }
     }
 
-     
-
-     @Override
-     public CompletableFuture<?>  analyzeFile(String prompt) {
+    @Override
+    public CompletableFuture<?> analyzeFile(String prompt) {
         return this.client.analyzeFile(prompt);
-     }
+    }
 
 }
