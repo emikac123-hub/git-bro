@@ -43,7 +43,7 @@ public class ChatGptAnalyzer implements CodeAnalyzer {
 
             if (content.isMissingNode() || content.isNull()) {
                 throw new Exception(
-                        "The AI response did not contain a 'message.content' field. Please ensure the response is properly formatted.");
+                        "The AI response did not contain a 'message.content' field! Please ensure the response is properly formatted.");
             }
 
             return content.asText();
