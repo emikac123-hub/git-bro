@@ -55,7 +55,8 @@ jobs:
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           script: |
-            const feedback = `${{ steps.call-api.outputs.feedback }}`;
+            echo ${{ steps.call-api.outputs.feedback }};
+            const feedback = ${{ toJSON(steps.call-api.outputs.feedback) }};
             if (!feedback || feedback.trim() === "") {
               console.log("No feedback to post.");
               return;
@@ -65,5 +66,5 @@ jobs:
               owner: context.repo.owner,
               repo: context.repo.repo,
               issue_number: context.issue.number,
-              body: `🤖 AI Code Review:\n\n${feedback}`
+              body: `AI Code Review:\n\n${feedback}`
             });
