@@ -64,8 +64,7 @@ public class ChatGptAnalyzer implements CodeAnalyzer {
         if (filename.endsWith(".java")) {
             promptBuilder.append("- Ensure compliance with Java coding standards (e.g., naming conventions).\n");
         }
-        String prompt = promptBuilder.toString();
-        return prompt
+        return promptBuilder.toString();
     }
 
 }
