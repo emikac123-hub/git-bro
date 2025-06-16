@@ -54,8 +54,8 @@ public class ChatGptAnalyzer implements CodeAnalyzer {
     }
 
     @Override
-    public CompletableFuture<?> analyzeFile(String prompt) {
-        return this.client.analyzeFile(prompt);
+    public CompletableFuture<?> analyzeFile(String filename, String diffContent) {
+        return this.client.analyzeFile(filename, diffContent);
     }
 
 }

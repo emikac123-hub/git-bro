@@ -5,11 +5,14 @@
 
 package com.erik.git_bro.model;
 
+import java.time.Instant;
+
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.Id;
 import jakarta.persistence.Lob;
 import jakarta.persistence.NamedEntityGraph;
+import lombok.Builder;
 import lombok.Data;
 
 /**
@@ -18,6 +21,7 @@ import lombok.Data;
  */
 @Data
 @Entity
+@Builder
 @NamedEntityGraph(name = "Review.all", attributeNodes={})
 public class Review {
 
@@ -31,5 +35,5 @@ public class Review {
     @Lob
     @Column(name ="feedback", columnDefinition = "CLOB")
     private String feedback; // AI Generated Comment
-    private String createdAt;
+    private Instant createdAt;
 }

@@ -2,6 +2,7 @@ package com.erik.git_bro.controller;
 
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
+import java.time.Instant;
 import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
 
@@ -17,6 +18,8 @@ import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.multipart.MultipartFile;
 
 import com.erik.git_bro.model.ErrorResponse;
+import com.erik.git_bro.model.Review;
+import com.erik.git_bro.repository.ReviewRepository;
 import com.erik.git_bro.service.CodeAnalysisService;
 
 import lombok.RequiredArgsConstructor;
@@ -27,10 +30,13 @@ import lombok.extern.slf4j.Slf4j;
 @Slf4j
 public class CodeReviewController {
 
+    private final ReviewRepository reviewRepository;
+
     CodeAnalysisService codeAnalysisService;
 
-    CodeReviewController(CodeAnalysisService codeAnalysisService) {
+    CodeReviewController(CodeAnalysisService codeAnalysisService, ReviewRepository reviewRepository) {
         this.codeAnalysisService = codeAnalysisService;
+        this.reviewRepository = reviewRepository;
     }
 
     @PostMapping(value = "/analyze-file", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
@@ -40,9 +46,16 @@ public class CodeReviewController {
         String diff = new String(file.getBytes(), StandardCharsets.UTF_8);
 
         return codeAnalysisService.analyzeFile(file.getOriginalFilename(), diff)
-                .handle((review, throwable) -> {
+                .handle((feedback, throwable) -> {
                     if (throwable == null) {
-                        return ResponseEntity.ok().body(review);
+                        final var review = Review.builder()
+                        .createdAt(Instant.now())
+                        .filePath(file.getOriginalFilename())
+                        .diffContent(diff)
+                        .feedback((String) feedback)
+                        .build();
+                        this.reviewRepository.save(review);
+                        return ResponseEntity.ok().body(feedback);
                     }
 
                     Throwable cause = throwable.getCause() != null ? throwable.getCause() : throwable;

@@ -83,23 +83,43 @@ public class ChatGPTClient {
         }
     }
 
-    public CompletableFuture<String> analyzeFile(String prompt) {
+    public CompletableFuture<String> analyzeFile(String filename, String diffContent) {
         CompletableFuture<String> future = new CompletableFuture<>();
+        String prompt = String.format("""
+                You are an expert senior Java software engineer specializing in backend services and code parsing.
+
+                Please review the following Git diff from file %s:
+
+                %s
+
+                Focus your review on:
+
+                1. Correctness and efficiency of parsing and filtering operations.
+                2. Code style, readability, and maintainability improvements.
+                3. Handling of edge cases and robustness against unusual inputs.
+                4. Performance considerations and potential optimizations.
+                5. Suggestions for unit and integration tests.
+                6. Quality of error handling and logging.
+                7. Security implications when parsing or processing inputs.
+
+                Lastly, provide a clear final recommendation on whether this pull request should be merged.
+                If the issues found are severe, explicitly advise against merging. Always include this recommendation.
+                """, filename, diffContent);
 
         try {
             String json = objectMapper.writeValueAsString(Map.of(
                     "model", "gpt-4o",
                     "messages", List.of(
-                            Map.of("role", "system", "content", "You are a senior code reviewer."),
+                            Map.of("role", "system", "content", "You are a expert code reviewer and sytem architect."),
                             Map.of("role", "user", "content", prompt)),
-                    "temperature", 0.2));
+                    "temperature", 0.3));
 
             RequestBody body = RequestBody.create(
                     json,
                     MediaType.parse("application/json"));
 
             Request request = new Request.Builder()
-                    .url("https://api.openai.com/v1/chat/completions")
+                    .url(API_URL)
                     .header("Authorization", "Bearer " + System.getenv("OPENAI_API_KEY"))
                     .header("Content-Type", "application/json")
                     .post(body)
