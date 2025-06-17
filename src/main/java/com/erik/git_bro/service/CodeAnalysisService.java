@@ -60,11 +60,6 @@ public class CodeAnalysisService {
     private final ReviewRepository reviewRepository;
 
     /**
-     * Utility service for parsing and extracting relevant information from diffs.
-     */
-    private final ParsingService parsingService;
-
-    /**
      * Constructs a new {@code CodeAnalysisService} with injected dependencies.
      *
      * @param analyzer         the AI code analyzer to use for generating feedback
@@ -76,7 +71,6 @@ public class CodeAnalysisService {
             final ReviewRepository reviewRepository) {
         this.analyzer = analyzer;
         this.reviewRepository = reviewRepository;
-        this.parsingService = parsingService;
     }
 
     /**
