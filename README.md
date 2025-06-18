@@ -77,3 +77,14 @@ app:
   Now you should have a valid private key (PKCS#8) and public key (PEM).
   These keys are needed to build the JWT for GitHub App authentication, typically done using Nimbus JOSE JWT.
    
+## NGrok
+Ngrok is a virtual server I use for deployment. It's handy for testing GitHub workflows on a "local server" from github. 
+Run 
+```
+ngrok http 8080 
+```
+to start the server. Then, copy and paste it into the work flow step "Call Code Review Api"
+```
+
+       API_URL: https://1102-149-154-20-92.ngrok-free.app/api/review/analyze-file
+```

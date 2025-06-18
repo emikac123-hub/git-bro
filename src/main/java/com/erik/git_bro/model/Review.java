@@ -12,7 +12,6 @@ import jakarta.persistence.JoinColumn;
 import jakarta.persistence.Lob;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.NamedEntityGraph;
-
 import lombok.Builder;
 import lombok.Data;
 
@@ -65,7 +64,7 @@ public class Review {
 
     /** AI model used for analysis (e.g., chatgpt, claude, codebert). */
     @ManyToOne
-    @JoinColumn(name = "ai_model_id", nullable = false)
+    @JoinColumn(name = "ai_model_id", nullable = true)
     private AiModel aiModel;
 
     /** Whether the AI flagged an issue (true = issue found). */
