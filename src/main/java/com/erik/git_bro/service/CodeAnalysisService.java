@@ -1,10 +1,7 @@
 package com.erik.git_bro.service;
 
-import java.io.IOException;
+
 import java.math.BigDecimal;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.nio.file.StandardOpenOption;
 import java.time.Instant;
 import java.util.concurrent.CompletableFuture;
 
@@ -14,6 +11,7 @@ import org.springframework.stereotype.Service;
 
 import com.erik.git_bro.ai.CodeAnalyzer;
 import com.erik.git_bro.model.Review;
+import com.erik.git_bro.repository.AiModelRepository;
 import com.erik.git_bro.repository.ReviewRepository;
 
 import lombok.extern.slf4j.Slf4j;
@@ -59,18 +57,26 @@ public class CodeAnalysisService {
      */
     private final ReviewRepository reviewRepository;
 
+    private final ParsingService parsingService;
+
+    private final AiModelRepository aiModelRepository;
     /**
      * Constructs a new {@code CodeAnalysisService} with injected dependencies.
      *
      * @param analyzer         the AI code analyzer to use for generating feedback
      * @param parsingService   service to extract metadata from code diffs
      * @param reviewRepository repository to persist review entities
+     * @param aiModelRepository repository to persist review entities
      */
     public CodeAnalysisService(@Qualifier("codeAnalyzer") CodeAnalyzer analyzer,
             final ParsingService parsingService,
-            final ReviewRepository reviewRepository) {
+            final ReviewRepository reviewRepository,
+            final AiModelRepository aiModeRepository) {
         this.analyzer = analyzer;
         this.reviewRepository = reviewRepository;
+        this.parsingService = parsingService;
+        this.aiModelRepository = aiModeRepository;
+        
     }
 
     /**
@@ -89,7 +95,8 @@ public class CodeAnalysisService {
     public CompletableFuture<?> analyzeFile(String filename, String diffContent) {
         return analyzer.analyzeFile(filename, diffContent)
                 .thenApply(feedback -> {
-                    final var feedbackCast = (String) feedback;
+                    // Sanitize feedback before inserting into DB.
+                    final var feedbackCast = (String) this.parsingService.cleanChunk((String) feedback);
                     final var review = Review.builder()
                             .createdAt(Instant.now())
                             .fileName(filename)
@@ -97,40 +104,15 @@ public class CodeAnalysisService {
                             .pullRequestId(null)
                             .issueFlag(null)
                             .diffContent(diffContent)
+                          //  .aiModel(review.setAiModel(aiModelRepository.findById(aiModelId).orElseThrow(() -> log.err));)
                             .feedback((String) feedbackCast)
                             .severityScore((BigDecimal) this.determineSeverity(feedbackCast))
                             .build();
+
                     reviewRepository.save(review);
+                    log.info("database insertion complete");
                     return feedback;
                 });
-    }
-
-    /**
-     * Writes feedback for a specific pull request asynchronously to a configured
-     * file.
-     * The feedback is appended with a timestamp and PR identifier.
-     * This method is non-blocking and exceptions during file writing are logged but
-     * not propagated.
-     *
-     * @param pullRequestId the unique identifier of the pull request
-     * @param feedback      the feedback string to write to the file
-     * @return a {@link CompletableFuture} that completes when the write operation
-     *         finishes
-     */
-    private CompletableFuture<Void> writeFeedbackToFile(String pullRequestId, String feedback) {
-        return CompletableFuture.runAsync(() -> {
-            try {
-                String entry = String.format("[%s] PR: %s%n%s%n%n",
-                        Instant.now().toString(), pullRequestId, feedback);
-                Files.write(Path.of(feedbackFilePath), entry.getBytes(),
-                        StandardOpenOption.CREATE, StandardOpenOption.APPEND);
-                log.info("Wrote feedback for PR {} to file: {}", pullRequestId, feedbackFilePath);
-            } catch (IOException e) {
-                log.error("Failed to write feedback for PR {} to file {}: {}",
-                        pullRequestId, feedbackFilePath, e.getMessage());
-                // File writing is non-critical, so exceptions are swallowed.
-            }
-        });
     }
 
     /**

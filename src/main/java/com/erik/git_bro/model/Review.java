@@ -8,7 +8,9 @@ import jakarta.persistence.Entity;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
+import jakarta.persistence.JoinColumn;
 import jakarta.persistence.Lob;
+import jakarta.persistence.ManyToOne;
 import jakarta.persistence.NamedEntityGraph;
 
 import lombok.Builder;
@@ -62,7 +64,9 @@ public class Review {
     private String feedback;
 
     /** AI model used for analysis (e.g., chatgpt, claude, codebert). */
-    private String modelUsed;
+    @ManyToOne
+    @JoinColumn(name = "ai_model_id", nullable = false)
+    private AiModel aiModel;
 
     /** Whether the AI flagged an issue (true = issue found). */
     private Boolean issueFlag;

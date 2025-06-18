@@ -39,3 +39,13 @@ app:
     file-path: ${FEEDBACK_FILE_PATH:/Users/erikmikac/code-review-feedback.txt}
 server:
   port: 8080
+github:
+  app:
+    id: 1419262
+    client-id: Iv23liJBHiWbx4HzMCN5
+    client-secret: PxAcAsmOkrN2gVL979zL
+    
+gitbro:
+  app:
+    private-key: ${GITBRO_PRIVATE_KEY}
+    public-key: ${GITBRO_PUBLIC_KEY} 

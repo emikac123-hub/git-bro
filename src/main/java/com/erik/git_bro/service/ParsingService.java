@@ -58,7 +58,8 @@ public class ParsingService {
      * @param diff the raw diff string to filter and process
      * @return a string containing only added lines from the diff, with '+' prefix removed
      */
-    public String filterAndExtractDiffLines(String diff) {
+    public String filterAndExtractDiffLines(String diffContent) {
+        final var diff = this.cleanChunk(diffContent);
         StringBuilder filtered = new StringBuilder();
         String[] lines = diff.split("\n");
 
