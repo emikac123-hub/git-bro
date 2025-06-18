@@ -33,7 +33,7 @@ jobs:
       - name: Call Code Review API (multipart/form-data)
         id: call-api
         env:
-          API_URL: https://c8c4-149-154-20-92.ngrok-free.app/api/review/analyze-file
+          API_URL: https://1102-149-154-20-92.ngrok-free.app/api/review/analyze-file
         run: |
           echo "Sending PR diff as file to $API_URL"
 
