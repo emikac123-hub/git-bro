@@ -1,4 +1,5 @@
 package com.erik.git_bro.service.github;
+
 import java.net.URI;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
@@ -6,11 +7,11 @@ import java.net.http.HttpResponse;
 import java.util.List;
 
 import org.springframework.stereotype.Service;
+
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
 import lombok.AllArgsConstructor;
-import lombok.RequiredArgsConstructor;
 
 @Service
 @AllArgsConstructor
@@ -23,7 +24,8 @@ public class GitHubAppService {
     private final String INSTALLATION_ID = "71819645";
 
     /**
-     * Exchange the app JWT for an installation access token. This is for my own app.
+     * Exchange the app JWT for an installation access token. This is for my own
+     * app.
      * 
      * @throws Exception
      */
@@ -67,7 +69,7 @@ public class GitHubAppService {
 
         }
         final JsonNode jsonNode = objectMapper.readTree(response.body());
-        return jsonNode.get("token").asText();
+        return jsonNode.get("id").asText();
     }
 
     public String getInstallationToken(final long installationId) throws Exception {
@@ -77,6 +79,7 @@ public class GitHubAppService {
 
         final HttpRequest request = HttpRequest.newBuilder()
                 .uri(URI.create("https://api.github.com/app/installation/" + installationId + "/access_tokens"))
+                .header("Authorization", "Bearer " + jwt)
                 .header("Accept", "application/vnd.github+json")
                 .POST(HttpRequest.BodyPublishers.noBody())
                 .build();
