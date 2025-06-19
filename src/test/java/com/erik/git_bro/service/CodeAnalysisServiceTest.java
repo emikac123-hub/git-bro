@@ -35,7 +35,8 @@ class CodeAnalysisServiceTest {
         reviewRepository = mock(ReviewRepository.class);
         parsingService = mock(ParsingService.class);
         aiModelRepository = mock(AiModelRepository.class);
-        codeAnalysisService = new CodeAnalysisService(codeAnalyzer, parsingService, reviewRepository, aiModelRepository);
+        codeAnalysisService = new CodeAnalysisService(codeAnalyzer, parsingService, reviewRepository,
+                aiModelRepository);
     }
 
     @Test
@@ -44,7 +45,9 @@ class CodeAnalysisServiceTest {
         String filename = "TestFile.java";
         String diffContent = "diff --git a/TestFile.java b/TestFile.java";
         String feedback = "Possible null pointer exception detected in line 42.";
-
+        when(parsingService.cleanChunk(anyString())).thenReturn(feedback);
+        
+        
         when(codeAnalyzer.analyzeFile(anyString(), anyString()))
                 .thenReturn((CompletableFuture) CompletableFuture.completedFuture(feedback));
 

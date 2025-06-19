@@ -1,6 +1,5 @@
 package com.erik.git_bro.service;
 
-
 import java.math.BigDecimal;
 import java.time.Instant;
 import java.util.concurrent.CompletableFuture;
@@ -60,12 +59,13 @@ public class CodeAnalysisService {
     private final ParsingService parsingService;
 
     private final AiModelRepository aiModelRepository;
+
     /**
      * Constructs a new {@code CodeAnalysisService} with injected dependencies.
      *
-     * @param analyzer         the AI code analyzer to use for generating feedback
-     * @param parsingService   service to extract metadata from code diffs
-     * @param reviewRepository repository to persist review entities
+     * @param analyzer          the AI code analyzer to use for generating feedback
+     * @param parsingService    service to extract metadata from code diffs
+     * @param reviewRepository  repository to persist review entities
      * @param aiModelRepository repository to persist review entities
      */
     public CodeAnalysisService(@Qualifier("codeAnalyzer") CodeAnalyzer analyzer,
@@ -76,7 +76,7 @@ public class CodeAnalysisService {
         this.reviewRepository = reviewRepository;
         this.parsingService = parsingService;
         this.aiModelRepository = aiModeRepository;
-        
+
     }
 
     /**
@@ -104,7 +104,8 @@ public class CodeAnalysisService {
                             .pullRequestId(null)
                             .issueFlag(null)
                             .diffContent(diffContent)
-                          //  .aiModel(review.setAiModel(aiModelRepository.findById(aiModelId).orElseThrow(() -> log.err));)
+                            // .aiModel(review.setAiModel(aiModelRepository.findById(aiModelId).orElseThrow(()
+                            // -> log.err));)
                             .feedback((String) feedbackCast)
                             .severityScore((BigDecimal) this.determineSeverity(feedbackCast))
                             .build();
@@ -115,7 +116,7 @@ public class CodeAnalysisService {
                 });
     }
 
-        /**
+    /**
      * Analyzes a given code diff asynchronously by sending it to the AI code
      * analyzer.
      * Once the analysis completes, a {@link Review} entity is created and saved
@@ -140,7 +141,8 @@ public class CodeAnalysisService {
                             .pullRequestId(null)
                             .issueFlag(null)
                             .diffContent(diffContent)
-                          //  .aiModel(review.setAiModel(aiModelRepository.findById(aiModelId).orElseThrow(() -> log.err));)
+                            // .aiModel(review.setAiModel(aiModelRepository.findById(aiModelId).orElseThrow(()
+                            // -> log.err));)
                             .feedback((String) feedbackCast)
                             .severityScore((BigDecimal) this.determineSeverity(feedbackCast))
                             .build();
@@ -154,10 +156,16 @@ public class CodeAnalysisService {
     /**
      * A severity score to measure the issues found in the PR.
      * Eventually, this will be displayed on a dashbaord on the UI.
+     * 
      * @param feedback - AI Generated Feedback
      * @return
      */
     private BigDecimal determineSeverity(String feedback) {
+        if (feedback == null || feedback.isBlank()) {
+            log.warn("The feedback is null, this could indicate a problem!");
+            return BigDecimal.valueOf(0.1); // lowest severity if feedback is blank
+        }
+
         feedback = feedback.toLowerCase();
 
         if (feedback.contains("null pointer") || feedback.contains("security")) {

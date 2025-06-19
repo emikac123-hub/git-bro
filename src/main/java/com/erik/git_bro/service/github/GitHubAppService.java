@@ -1,5 +1,4 @@
 package com.erik.git_bro.service.github;
-
 import java.net.URI;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
@@ -7,14 +6,14 @@ import java.net.http.HttpResponse;
 import java.util.List;
 
 import org.springframework.stereotype.Service;
-
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
+import lombok.AllArgsConstructor;
 import lombok.RequiredArgsConstructor;
 
 @Service
-@RequiredArgsConstructor
+@AllArgsConstructor
 public class GitHubAppService {
 
     private final GitHubAppTokenService gitHubAppTokenService;
@@ -52,7 +51,7 @@ public class GitHubAppService {
      * 
      * @throws Exception
      */
-    public long getInstallationId(final String owner, final String repo) throws Exception {
+    public String getInstallationId(final String owner, final String repo) throws Exception {
         final String jwt = gitHubAppTokenService.createJwtToken();
 
         final HttpClient client = HttpClient.newHttpClient();

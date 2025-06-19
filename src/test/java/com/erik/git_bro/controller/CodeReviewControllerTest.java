@@ -1,29 +1,36 @@
 package com.erik.git_bro.controller;
 
-import com.erik.git_bro.model.ErrorResponse;
-import com.erik.git_bro.service.CodeAnalysisService;
-import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Test;
-import org.mockito.Mockito;
-import org.springframework.http.ResponseEntity;
-import org.springframework.mock.web.MockMultipartFile;
-
 import java.nio.charset.StandardCharsets;
 import java.util.concurrent.CompletableFuture;
 
-import static org.junit.jupiter.api.Assertions.*;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 import static org.mockito.ArgumentMatchers.anyString;
+import org.mockito.Mockito;
 import static org.mockito.Mockito.when;
+import org.springframework.http.ResponseEntity;
+import org.springframework.mock.web.MockMultipartFile;
+
+import com.erik.git_bro.model.ErrorResponse;
+import com.erik.git_bro.service.CodeAnalysisService;
+import com.erik.git_bro.service.github.GitHubAppService;
+import com.erik.git_bro.service.github.GitHubCommentService;
 
 class CodeReviewControllerTest {
 
     private CodeReviewController controller;
     private CodeAnalysisService codeAnalysisService;
+    private GitHubAppService gitHubAppService;
+    private GitHubCommentService gitHubCommentService;
 
     @BeforeEach
     void setUp() {
         codeAnalysisService = Mockito.mock(CodeAnalysisService.class);
-        controller = new CodeReviewController(codeAnalysisService);
+        gitHubAppService = Mockito.mock(GitHubAppService.class);
+        gitHubCommentService = Mockito.mock(GitHubCommentService.class);
+        controller = new CodeReviewController(codeAnalysisService, gitHubAppService, gitHubCommentService);
     }
 
     @Test
@@ -39,7 +46,7 @@ class CodeReviewControllerTest {
                 .thenReturn((CompletableFuture) CompletableFuture.completedFuture(expectedFeedback));
 
         // When
-        CompletableFuture<ResponseEntity<?>> responseFuture = controller.analyzeFromFile(file);
+        CompletableFuture<ResponseEntity<?>> responseFuture = controller.analyzeFromFile(file, null,null,1);
         ResponseEntity<?> response = responseFuture.get();
 
         // Then
@@ -62,7 +69,7 @@ class CodeReviewControllerTest {
                 .thenReturn((CompletableFuture) failedFuture);
 
         // When
-        CompletableFuture<ResponseEntity<?>> responseFuture = controller.analyzeFromFile(file);
+        CompletableFuture<ResponseEntity<?>> responseFuture = controller.analyzeFromFile(file, null, null, 1);
         ResponseEntity<?> response = responseFuture.get();
 
         // Then
@@ -88,7 +95,7 @@ class CodeReviewControllerTest {
                 .thenReturn((CompletableFuture) failedFuture);
 
         // When
-        CompletableFuture<ResponseEntity<?>> responseFuture = controller.analyzeFromFile(file);
+        CompletableFuture<ResponseEntity<?>> responseFuture = controller.analyzeFromFile(file,null, null, 1);
         ResponseEntity<?> response = responseFuture.get();
 
         // Then

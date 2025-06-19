@@ -12,7 +12,6 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.multipart.MultipartFile;
 
-import com.erik.git_bro.client.ChatGPTClient;
 import com.erik.git_bro.dto.InlineReviewResponse;
 import com.erik.git_bro.dto.Issue;
 import com.erik.git_bro.model.ErrorResponse;
@@ -21,7 +20,7 @@ import com.erik.git_bro.service.github.GitHubAppService;
 import com.erik.git_bro.service.github.GitHubCommentService;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
-import lombok.AllArgsConstructor;
+import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 
 /**
@@ -35,10 +34,10 @@ import lombok.extern.slf4j.Slf4j;
 @RestController
 @RequestMapping("/api/review")
 @Slf4j
-@AllArgsConstructor
+@RequiredArgsConstructor
 public class CodeReviewController {
 
-    private final ChatGPTClient chatGPTClient;
+
 
     private final ObjectMapper objectMapper = new ObjectMapper();
     private final CodeAnalysisService codeAnalysisService;
@@ -104,8 +103,8 @@ public class CodeReviewController {
                     }
 
                     try {
-                        long installationId = gitHubAppService.getInstallationId(owner, repo);
-                        String token = gitHubAppService.getInstallationToken(installationId);
+                        String installationId = gitHubAppService.getInstallationId(owner, repo);
+                        String token = gitHubAppService.getInstallationToken(Long.parseLong(installationId));
                         InlineReviewResponse inlineResponse = objectMapper.readValue((String) feedback,
                                 InlineReviewResponse.class);
                         for (Issue issue : inlineResponse.getIssues()) {
