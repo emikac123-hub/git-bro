@@ -37,14 +37,11 @@ import lombok.extern.slf4j.Slf4j;
 @RequiredArgsConstructor
 public class CodeReviewController {
 
-
-
     private final ObjectMapper objectMapper = new ObjectMapper();
     private final CodeAnalysisService codeAnalysisService;
 
     private final GitHubAppService gitHubAppService;
     private final GitHubCommentService gitHubCommentService;
-
 
     /**
      * Analyzes the contents of a file asynchronously. Mainly used for posting a
@@ -105,7 +102,12 @@ public class CodeReviewController {
                     try {
                         String installationId = gitHubAppService.getInstallationId(owner, repo);
                         String token = gitHubAppService.getInstallationToken(Long.parseLong(installationId));
-                        InlineReviewResponse inlineResponse = objectMapper.readValue((String) feedback,
+                        String cleanFeedback = ((String) feedback)
+                                .replaceAll("(?s)```json\\s*", "")
+                                .replaceAll("(?s)```", "")
+                                .trim();
+
+                        InlineReviewResponse inlineResponse = objectMapper.readValue(cleanFeedback,
                                 InlineReviewResponse.class);
                         for (Issue issue : inlineResponse.getIssues()) {
                             gitHubCommentService.postInlineComment(
