@@ -24,8 +24,9 @@ public class GitHubAppService {
     private final String INSTALLATION_ID = "71819645";
 
     /**
-     *  Exchange the app JWT for an installation access token
-     * @throws Exception 
+     * Exchange the app JWT for an installation access token. This is for my own app.
+     * 
+     * @throws Exception
      */
     public String getInstallationToken() throws Exception {
         final String jwt = gitHubAppTokenService.createJwtToken();
@@ -47,14 +48,60 @@ public class GitHubAppService {
     }
 
     /**
+     * Exchange the app JWT for an installation access token
+     * 
+     * @throws Exception
+     */
+    public long getInstallationId(final String owner, final String repo) throws Exception {
+        final String jwt = gitHubAppTokenService.createJwtToken();
+
+        final HttpClient client = HttpClient.newHttpClient();
+        final HttpRequest request = HttpRequest.newBuilder()
+                .uri(URI.create("https://api.github.com/repos/" + owner + "/" + repo + "/installation"))
+                .header("Authorization", "Bearer " + jwt)
+                .header("Accept", "application/vnd.github+json")
+                .GET()
+                .build();
+        final HttpResponse<String> response = client.send(request, HttpResponse.BodyHandlers.ofString());
+        if (response.statusCode() != 201) {
+            throw new RuntimeException("Failed to get the installation token: " + response.body());
+
+        }
+        final JsonNode jsonNode = objectMapper.readTree(response.body());
+        return jsonNode.get("token").asText();
+    }
+
+    public String getInstallationToken(final long installationId) throws Exception {
+        final String jwt = gitHubAppTokenService.createJwtToken();
+
+        final HttpClient client = HttpClient.newHttpClient();
+
+        final HttpRequest request = HttpRequest.newBuilder()
+                .uri(URI.create("https://api.github.com/app/installation/" + installationId + "/access_tokens"))
+                .header("Accept", "application/vnd.github+json")
+                .POST(HttpRequest.BodyPublishers.noBody())
+                .build();
+
+        final HttpResponse<String> response = client.send(request, HttpResponse.BodyHandlers.ofString());
+
+        if (response.statusCode() != 201) {
+            throw new RuntimeException("Failed to get installation token: " + response.body());
+        }
+
+        final JsonNode jsonNode = objectMapper.readTree(response.body());
+        return jsonNode.get("token").asText();
+    }
+
+    /**
      * List repositories accessible to the GitHub App Installation.
-     * @throws Exception 
+     * 
+     * @throws Exception
      */
     public List<String> listInstallationRepos() throws Exception {
         final String installationToken = getInstallationToken();
         final HttpClient client = HttpClient.newHttpClient();
 
-        final        HttpRequest request = HttpRequest.newBuilder()
+        final HttpRequest request = HttpRequest.newBuilder()
                 .uri(URI.create("https://api.github.com/installation/repositories"))
                 .header("Authorization", "token " + installationToken)
                 .header("Accept", "application/vnd.github+json")

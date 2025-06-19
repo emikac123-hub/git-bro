@@ -12,9 +12,17 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.multipart.MultipartFile;
 
+import com.erik.git_bro.client.ChatGPTClient;
+import com.erik.git_bro.dto.InlineReviewResponse;
+import com.erik.git_bro.dto.Issue;
 import com.erik.git_bro.model.ErrorResponse;
 import com.erik.git_bro.service.CodeAnalysisService;
+import com.erik.git_bro.service.github.GitHubAppService;
+import com.erik.git_bro.service.github.GitHubAppTokenService;
+import com.erik.git_bro.service.github.GitHubCommentService;
+import com.fasterxml.jackson.databind.ObjectMapper;
 
+import lombok.AllArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 
 /**
@@ -28,23 +36,21 @@ import lombok.extern.slf4j.Slf4j;
 @RestController
 @RequestMapping("/api/review")
 @Slf4j
+@AllArgsConstructor
 public class CodeReviewController {
 
+    private final ChatGPTClient chatGPTClient;
+
+    private final ObjectMapper objectMapper = new ObjectMapper();
     private final CodeAnalysisService codeAnalysisService;
 
-    /**
-     * Constructs a new {@code CodeReviewController} with the given
-     * {@link CodeAnalysisService}.
-     *
-     * @param codeAnalysisService the service used to perform asynchronous code
-     *                            analysis
-     */
-    public CodeReviewController(CodeAnalysisService codeAnalysisService) {
-        this.codeAnalysisService = codeAnalysisService;
-    }
+    private final GitHubAppService gitHubAppService;
+    private final GitHubAppTokenService gitHubAppTokenService;
+    private final GitHubCommentService gitHubCommentService;
 
     /**
-     * Analyzes the contents of a file asynchronously.
+     * Analyzes the contents of a file asynchronously. Mainly used for posting a
+     * Block Commet onto a GitHub PR Review.
      * <p>
      * Accepts a multipart form upload with a file parameter named "file". The file
      * contents are read
@@ -78,23 +84,65 @@ public class CodeReviewController {
 
         return codeAnalysisService.analyzeFile(file.getOriginalFilename(), diff)
                 .handle((feedback, throwable) -> {
-                    if (throwable == null) {
-                        return ResponseEntity.ok().body(feedback);
-                    }
-
-                    Throwable cause = throwable.getCause() != null ? throwable.getCause() : throwable;
-                    log.error("Code analysis failed", cause);
-
-                    var error = ErrorResponse.builder()
-                            .message(cause.getMessage())
-                            .details(cause.getCause() != null ? cause.getCause().getLocalizedMessage() : "")
-                            .build();
-
-                    if (cause instanceof IllegalArgumentException) {
-                        return ResponseEntity.badRequest().body(error);
-                    }
-
-                    return ResponseEntity.status(500).body(error);
+                    return this.showResponse((String) feedback, throwable, "code analysis failed");
                 });
+    }
+
+    @PostMapping(value = "/analyze-file-by-line", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    public CompletableFuture<ResponseEntity<?>> postInlineComment(@RequestParam("file") MultipartFile file,
+            @RequestParam("owner") String owner,
+            @RequestParam("repo") String repo,
+            @RequestParam("pullNumber") int pullNumber) throws IOException {
+        String diff = new String(file.getBytes(), StandardCharsets.UTF_8);
+
+        return this.codeAnalysisService.analyzeFileLineByLine(file.getName(), diff)
+                .handle((feedback, throwable) -> {
+                    if (throwable != null) {
+                        return this.showResponse((String) feedback, throwable, "Failure to analyze code by line.");
+                    }
+
+                    try {
+                        long installationId = gitHubAppService.getInstallationId(owner, repo);
+                        String token = gitHubAppService.getInstallationToken(installationId);
+                        InlineReviewResponse inlineResponse = objectMapper.readValue((String) feedback,
+                                InlineReviewResponse.class);
+                        for (Issue issue : inlineResponse.getIssues()) {
+                            gitHubCommentService.postInlineComment(
+                                    token,
+                                    owner,
+                                    repo,
+                                    pullNumber,
+                                    issue.getFile(),
+                                    issue.getLine(),
+                                    issue.getComment());
+                        }
+
+                        return ResponseEntity.ok()
+                                .body("Posted " + inlineResponse.getIssues().size() + " inline comments.");
+                    } catch (Exception e) {
+                        log.error("Failed to parse or post inline comments", e);
+                        return ResponseEntity.status(500).body("Failed to post inline comments: " + e.getMessage());
+                    }
+                });
+    }
+
+    private ResponseEntity<?> showResponse(final String feedback, final Throwable throwable, String logMessage) {
+        if (throwable == null) {
+            return ResponseEntity.ok().body(feedback);
+        }
+
+        Throwable cause = throwable.getCause() != null ? throwable.getCause() : throwable;
+        log.error(logMessage, cause);
+
+        var error = ErrorResponse.builder()
+                .message(cause.getMessage())
+                .details(cause.getCause() != null ? cause.getCause().getLocalizedMessage() : "")
+                .build();
+
+        if (cause instanceof IllegalArgumentException) {
+            return ResponseEntity.badRequest().body(error);
+        }
+
+        return ResponseEntity.status(500).body(error);
     }
 }

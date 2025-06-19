@@ -115,6 +115,42 @@ public class CodeAnalysisService {
                 });
     }
 
+        /**
+     * Analyzes a given code diff asynchronously by sending it to the AI code
+     * analyzer.
+     * Once the analysis completes, a {@link Review} entity is created and saved
+     * containing
+     * the analysis feedback, diff content, extracted file path, and creation
+     * timestamp.
+     *
+     * @param filename    the name of the file being analyzed (used for context)
+     * @param diffContent the unified diff text representing code changes
+     * @return a {@link CompletableFuture} that completes with the AI-generated
+     *         feedback string
+     */
+    public CompletableFuture<?> analyzeFileLineByLine(String filename, String diffContent) {
+        return analyzer.analyzeFileLineByLine(filename, diffContent)
+                .thenApply(feedback -> {
+                    // Sanitize feedback before inserting into DB.
+                    final var feedbackCast = (String) this.parsingService.cleanChunk((String) feedback);
+                    final var review = Review.builder()
+                            .createdAt(Instant.now())
+                            .fileName(filename)
+                            .prUrl(null)
+                            .pullRequestId(null)
+                            .issueFlag(null)
+                            .diffContent(diffContent)
+                          //  .aiModel(review.setAiModel(aiModelRepository.findById(aiModelId).orElseThrow(() -> log.err));)
+                            .feedback((String) feedbackCast)
+                            .severityScore((BigDecimal) this.determineSeverity(feedbackCast))
+                            .build();
+
+                    reviewRepository.save(review);
+                    log.info("database insertion complete");
+                    return feedback;
+                });
+    }
+
     /**
      * A severity score to measure the issues found in the PR.
      * Eventually, this will be displayed on a dashbaord on the UI.
