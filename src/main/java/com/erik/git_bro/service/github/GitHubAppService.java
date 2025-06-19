@@ -78,7 +78,7 @@ public class GitHubAppService {
         final HttpClient client = HttpClient.newHttpClient();
 
         final HttpRequest request = HttpRequest.newBuilder()
-                .uri(URI.create("https://api.github.com/app/installation/" + installationId + "/access_tokens"))
+                .uri(URI.create("https://api.github.com/app/installations/" + installationId + "/access_tokens"))
                 .header("Authorization", "Bearer " + jwt)
                 .header("Accept", "application/vnd.github+json")
                 .POST(HttpRequest.BodyPublishers.noBody())
