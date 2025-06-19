@@ -33,7 +33,7 @@ jobs:
       - name: Call Code Review API (analyze-file-by-line)
         id: call-api
         env:
-          API_URL: https://YOUR_PUBLIC_URL/api/review/analyze-file-by-line
+          API_URL: https://1102-149-154-20-92.ngrok-free.app/api/review/analyze-file-by-line
         run: |
           echo "Sending PR diff as file to $API_URL"
 
