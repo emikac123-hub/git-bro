@@ -37,4 +37,15 @@ public class GitHubAppController {
             return ResponseEntity.status(500).body("Failed to list repos: " + e.getMessage());
         }
     }
+
+
+    @GetMapping("/sha")
+    public ResponseEntity<?> getSha() throws Exception {
+        try {
+            final String sha = gitHubAppService.getCommitSHA("emikac123-hub", "git-bro", 8);
+            return ResponseEntity.ok(sha);
+        } catch (IOException | InterruptedException e) {
+            return ResponseEntity.status(500).body("Failed to list repos: " + e.getMessage());
+        }
+    }
 }

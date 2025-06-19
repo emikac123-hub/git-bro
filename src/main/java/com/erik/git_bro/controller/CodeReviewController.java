@@ -100,9 +100,10 @@ public class CodeReviewController {
                     }
 
                     try {
-                        String installationId = gitHubAppService.getInstallationId(owner, repo);
-                        String token = gitHubAppService.getInstallationToken(Long.parseLong(installationId));
-                        String cleanFeedback = ((String) feedback)
+                        final String installationId = gitHubAppService.getInstallationId(owner, repo);
+                        final String sha = gitHubAppService.getCommitSHA(owner, repo, pullNumber);        
+                        final String token = gitHubAppService.getInstallationToken(Long.parseLong(installationId));
+                        final String cleanFeedback = ((String) feedback)
                                 .replaceAll("(?s)```json\\s*", "")
                                 .replaceAll("(?s)```", "")
                                 .trim();
@@ -117,7 +118,8 @@ public class CodeReviewController {
                                     pullNumber,
                                     issue.getFile(),
                                     issue.getLine(),
-                                    issue.getComment());
+                                    issue.getComment(),
+                                    sha);
                         }
 
                         return ResponseEntity.ok()
