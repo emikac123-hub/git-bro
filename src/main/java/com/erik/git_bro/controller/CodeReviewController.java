@@ -78,7 +78,10 @@ public class CodeReviewController {
      */
     @PostMapping(value = "/analyze-file", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public CompletableFuture<ResponseEntity<?>> analyzeFromFile(
-            @RequestParam("file") MultipartFile file) throws IOException {
+            @RequestParam("file") MultipartFile file,
+            @RequestParam("owner") String owner,
+            @RequestParam("repo") String repo,
+            @RequestParam("pullNumber") int pullNumber) throws IOException {
 
         String diff = new String(file.getBytes(), StandardCharsets.UTF_8);
 
