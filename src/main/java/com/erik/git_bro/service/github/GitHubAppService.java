@@ -64,8 +64,8 @@ public class GitHubAppService {
                 .GET()
                 .build();
         final HttpResponse<String> response = client.send(request, HttpResponse.BodyHandlers.ofString());
-        if (response.statusCode() != 201) {
-            throw new RuntimeException("Failed to get the installation token: " + response.body());
+        if (response.statusCode() != 200) {
+            throw new RuntimeException("Failed to get the installation ID: " + response.body());
 
         }
         final JsonNode jsonNode = objectMapper.readTree(response.body());
