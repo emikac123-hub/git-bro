@@ -194,6 +194,8 @@ public class ChatGPTClient {
 
                         String responseText = responseBody.string();
                         JsonNode jsonNode = objectMapper.readTree(responseText);
+                        log.info("The response====");
+                        log.info(responseText);
                         String content = jsonNode
                                 .get("choices")
                                 .get(0)
