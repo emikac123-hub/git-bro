@@ -19,7 +19,6 @@ import com.erik.git_bro.model.ErrorResponse;
 import com.erik.git_bro.service.CodeAnalysisService;
 import com.erik.git_bro.service.github.GitHubAppService;
 import com.erik.git_bro.service.github.GitHubAppTokenService;
-import com.erik.git_bro.service.github.GitHubCommentService;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
 import lombok.AllArgsConstructor;
@@ -46,7 +45,7 @@ public class CodeReviewController {
 
     private final GitHubAppService gitHubAppService;
     private final GitHubAppTokenService gitHubAppTokenService;
-    private final GitHubCommentService gitHubCommentService;
+
 
     /**
      * Analyzes the contents of a file asynchronously. Mainly used for posting a
@@ -110,7 +109,7 @@ public class CodeReviewController {
                         InlineReviewResponse inlineResponse = objectMapper.readValue((String) feedback,
                                 InlineReviewResponse.class);
                         for (Issue issue : inlineResponse.getIssues()) {
-                            gitHubCommentService.postInlineComment(
+                            gitHubAppService.postInlineComment(
                                     token,
                                     owner,
                                     repo,
