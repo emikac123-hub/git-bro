@@ -74,7 +74,7 @@ jobs:
             });
       - name: Run GitBro JavaDoc Generator
         run: |
-          curl -X POST https://mygitbro.app/api/javadoc-generator \
+          curl -X POST  https://8845-149-154-20-92.ngrok-free.app/api/javadoc-generator \
               -F "owner=${{ github.repository_owner }}" \
               -F "repo=${{ github.event.repository.name }}" \
               -F "pullNumber=${{ github.event.pull_request.number }}" \
