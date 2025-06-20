@@ -146,6 +146,7 @@ public class ChatGPTClient {
 
                     * Use exact file name and line number from this diff.
                     * If unsure about line number, provide best guess based on context.
+                    * Provide a code snippet to illustrate your point.
                     * If no issues are found, return: { "issues": [], "recommendation": "merge" }
                     * Do NOT include extra explanation or markdown — return pure JSON.
 
