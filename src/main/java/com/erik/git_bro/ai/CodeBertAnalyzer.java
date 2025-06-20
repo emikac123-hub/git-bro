@@ -10,14 +10,18 @@ import java.util.List;
 import java.util.concurrent.CompletableFuture;
 
 /**
- * {@code CodeBertAnalyzer} is an implementation of the {@link CodeAnalyzer} interface
+ * {@code CodeBertAnalyzer} is an implementation of the {@link CodeAnalyzer}
+ * interface
  * that uses the CodeBERT model client to analyze code snippets.
  * <p>
- * It processes code input as chunks and parses the AI response to detect potential code issues
- * such as possible null pointer exceptions and style violations based on embedding analysis.
+ * It processes code input as chunks and parses the AI response to detect
+ * potential code issues
+ * such as possible null pointer exceptions and style violations based on
+ * embedding analysis.
  * </p>
  * <p>
- * This component uses {@link CodeBertClient} to communicate with the CodeBERT AI model,
+ * This component uses {@link CodeBertClient} to communicate with the CodeBERT
+ * AI model,
  * and Jackson's {@link ObjectMapper} to parse JSON responses.
  * </p>
  */
@@ -35,27 +39,32 @@ public class CodeBertAnalyzer implements CodeAnalyzer {
     public CodeBertAnalyzer(CodeBertClient client) {
         this.client = client;
     }
+
     /**
-     * Parses the raw JSON response returned from CodeBERT and analyzes the embeddings
+     * Parses the raw JSON response returned from CodeBERT and analyzes the
+     * embeddings
      * to detect possible code issues.
      * <p>
-     * This method interprets the response as a list of vectors (embeddings) and computes
+     * This method interprets the response as a list of vectors (embeddings) and
+     * computes
      * average values to heuristically flag potential problems such as:
      * <ul>
-     *   <li>Possible null pointer exceptions (if max mean embedding > 0.1)</li>
-     *   <li>Style violations (if second embedding's mean > 0.05)</li>
+     * <li>Possible null pointer exceptions (if max mean embedding > 0.1)</li>
+     * <li>Style violations (if second embedding's mean > 0.05)</li>
      * </ul>
      * If no issues are detected, it returns "No issues detected."
      * </p>
      *
      * @param rawResponse the raw JSON string response from CodeBERT
-     * @return a human-readable string summarizing detected issues or a failure message
+     * @return a human-readable string summarizing detected issues or a failure
+     *         message
      */
     @Override
     public String parseAiResponse(String rawResponse) {
         try {
             final List<List<Double>> embeddings = objectMapper.readValue(rawResponse,
-                    new TypeReference<List<List<Double>>>() {});
+                    new TypeReference<List<List<Double>>>() {
+                    });
             List<String> issues = new ArrayList<>();
 
             List<Double> vectorMeans = embeddings.stream()
@@ -101,5 +110,11 @@ public class CodeBertAnalyzer implements CodeAnalyzer {
     public CompletableFuture<?> analyzeFileLineByLine(String filename, String diffContent) {
         // TODO Auto-generated method stub
         return null;
+    }
+
+    @Override
+    public CompletableFuture<String> sendJavaDocPrompt(String methodText) {
+        // TODO Auto-generated method stub
+        return CompletableFuture.completedFuture(null);
     }
 }
