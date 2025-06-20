@@ -35,19 +35,6 @@ public class CodeBertAnalyzer implements CodeAnalyzer {
     public CodeBertAnalyzer(CodeBertClient client) {
         this.client = client;
     }
-
-    /**
-     * Sends a list of code chunks to the CodeBERT client for analysis.
-     *
-     * @param chunkedInput a list of code snippets split into chunks
-     * @return a string representing the raw AI response from CodeBERT
-     * @throws Exception if the client fails to analyze the input
-     */
-    @Override
-    public String analyzeCode(List<String> chunkedInput) throws Exception {
-        return client.analyzeCode(chunkedInput);
-    }
-
     /**
      * Parses the raw JSON response returned from CodeBERT and analyzes the embeddings
      * to detect possible code issues.
@@ -108,5 +95,11 @@ public class CodeBertAnalyzer implements CodeAnalyzer {
     @Override
     public CompletableFuture<String> analyzeFile(String filename, String diffContent) {
         return CompletableFuture.completedFuture(null);
+    }
+
+    @Override
+    public CompletableFuture<?> analyzeFileLineByLine(String filename, String diffContent) {
+        // TODO Auto-generated method stub
+        return null;
     }
 }

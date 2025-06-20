@@ -54,3 +54,37 @@ app:
   feedback:
     file-path: /path/to/code-review-feedback.txt
 ```
+
+## How to retreive a GitHub jwt token
+
+  Load the GitHub App private key from PEM file.
+  
+  PEM files contain Base64-encoded key data, wrapped in header/footer lines.
+  We strip the BEGIN/END headers, then decode the Base64 body to obtain DER-encoded key bytes.
+  
+  I included stripping the headers in code, in case I forget to manually remove them.
+  
+  To get this working with Java's KeyFactory, the private key must be in PKCS#8 format.
+  The private key you download from GitHub IS already PKCS#8, so **you do not need to convert it** — 
+  unless you've manually generated keys elsewhere (like OpenSSL) in PKCS#1 format.
+  
+  If you DO need to convert a PKCS#1 private key to PKCS#8, use this command:
+  openssl pkcs8 -topk8 -inform PEM -outform PEM -nocrypt -in my_rsa_github_pem.pem -out private_key_pkcs8.pem
+  
+  Additionally, to generate the corresponding public key (optional for constructing some JWT libraries):
+  openssl rsa -in gitbro-ai-platform.2025-06-17.private-key.pem -pubout -out gitbro-public-key.pem
+  
+  Now you should have a valid private key (PKCS#8) and public key (PEM).
+  These keys are needed to build the JWT for GitHub App authentication, typically done using Nimbus JOSE JWT.
+   
+## NGrok
+Ngrok is a virtual server I use for deployment. It's handy for testing GitHub workflows on a "local server" from github. 
+Run 
+```
+ngrok http 8080 
+```
+to start the server. Then, copy and paste it into the work flow step "Call Code Review Api"
+```
+
+       API_URL: https://1102-149-154-20-92.ngrok-free.app/api/review/analyze-file
+```

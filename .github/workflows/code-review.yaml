@@ -30,15 +30,18 @@ jobs:
           name: pr-diff
           path: pr.diff
 
-      - name: Call Code Review API (multipart/form-data)
+      - name: Call Code Review API (analyze-file-by-line)
         id: call-api
         env:
-          API_URL: https://c8c4-149-154-20-92.ngrok-free.app/api/review/analyze-file
+          API_URL: https://8845-149-154-20-92.ngrok-free.app/api/review/analyze-file-by-line
         run: |
           echo "Sending PR diff as file to $API_URL"
 
           response=$(curl -s -v -u user:password -X POST "$API_URL" \
-            -F "file=@pr.diff;type=text/plain")
+            -F "file=@pr.diff;type=text/plain" \
+            -F "owner=${{ github.repository_owner }}" \
+            -F "repo=${{ github.event.repository.name }}" \
+            -F "pullNumber=${{ github.event.pull_request.number }}" )
 
           echo "Raw response: $response"
 

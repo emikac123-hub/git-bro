@@ -1,8 +1,9 @@
 package com.erik.git_bro.ai;
 
-import java.util.List;
 import java.util.concurrent.CompletableFuture;
+
 import org.springframework.stereotype.Component;
+
 import com.erik.git_bro.client.ChatGPTClient;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -42,9 +43,11 @@ public class ChatGptAnalyzer implements CodeAnalyzer {
      * @return the raw string feedback from the AI model
      * @throws Exception if the ChatGPT client fails to process the input
      */
+
     @Override
-    public String analyzeCode(List<String> chunkedInput) throws Exception {
-        return client.analyzeCode(chunkedInput);
+    public CompletableFuture<?> analyzeFileLineByLine(String filename, String diffContent) {
+        // TODO Auto-generated method stub
+        return this.client.analyzeFileLineByLine(filename, diffContent);
     }
 
     /**
@@ -95,4 +98,5 @@ public class ChatGptAnalyzer implements CodeAnalyzer {
     public CompletableFuture<?> analyzeFile(String filename, String diffContent) {
         return this.client.analyzeFile(filename, diffContent);
     }
+
 }

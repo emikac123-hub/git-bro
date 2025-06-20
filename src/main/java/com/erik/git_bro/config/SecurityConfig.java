@@ -4,7 +4,13 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
+import org.springframework.security.config.annotation.web.configurers.CsrfConfigurer;
 import org.springframework.security.web.SecurityFilterChain;
+
+
+import static org.springframework.security.config.Customizer.withDefaults;
+
+import java.util.concurrent.Executor;
 
 /**
  * Security configuration for the application.
@@ -26,26 +32,30 @@ import org.springframework.security.web.SecurityFilterChain;
 @Configuration
 @EnableWebSecurity
 public class SecurityConfig {
-    /**
-     * Defines the security filter chain for HTTP requests.
-     *
-     * @param http the {@link HttpSecurity} to configure
-     * @return the built {@link SecurityFilterChain}
-     * @throws Exception if an error occurs while configuring security
-     */
+
+    private final Executor virtualThreadExecutor;
+
+    SecurityConfig(Executor virtualThreadExecutor) {
+        this.virtualThreadExecutor = virtualThreadExecutor;
+    }
+
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
         http
-            .csrf().disable() // Disable CSRF protection for simplicity or testing
-            .headers(headers -> headers
-                .frameOptions(frame -> frame.disable()) // Allow use of frames for H2 console
-            )
+            .csrf(CsrfConfigurer::disable)
+            .headers(headers -> headers.frameOptions(frame -> frame.disable()))
             .authorizeHttpRequests(auth -> auth
-                .requestMatchers("/h2-console/**").permitAll() // Allow unrestricted access to H2 console
-                .anyRequest().authenticated() // Require authentication for all other requests
+                .requestMatchers("/h2-console/**").permitAll()
+                .requestMatchers("/actuator/health").permitAll()
+                .anyRequest().authenticated()
             )
-            .httpBasic(); // Enable HTTP Basic authentication
+            .httpBasic(withDefaults()) // simpler for now
+            .logout(logout -> logout
+                .logoutSuccessUrl("/")
+            );
 
         return http.build();
     }
 }
+
+

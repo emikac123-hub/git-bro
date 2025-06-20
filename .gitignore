@@ -39,3 +39,7 @@ src/main/java/.DS_Store
 src/main/java/com/.DS_Store
 src/main/java/com/erik/git_bro/.DS_Store
 .DS_Store
+src/main/resources/secret/gitbro-ai-platform.2025-06-17.private-key.pem
+src/main/resources/secret/gitbro-public-key.pem
+src/main/resources/secret/gitbro.pem
+src/main/resources/secret/gitbro.pem.b64
