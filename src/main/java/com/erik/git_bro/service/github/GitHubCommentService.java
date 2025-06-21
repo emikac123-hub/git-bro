@@ -34,8 +34,8 @@ public class GitHubCommentService {
             String sha) throws IOException {
 
         String url = String.format(
-                "https://api.github.com/repos/%s/%s/pulls/comments",
-                owner, repo);
+                "https://api.github.com/repos/%s/%s/pulls/%s/comments",
+                owner, repo, pullNumber);
 
         // Build request body
         Map<String, Object> json = Map.of(
