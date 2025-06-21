@@ -1,7 +1,5 @@
 package com.erik.git_bro.ai;
 
-import java.io.IOException;
-import java.util.List;
 import java.util.concurrent.CompletableFuture;
 
 import org.springframework.context.annotation.Primary;
@@ -21,16 +19,6 @@ import org.springframework.context.annotation.Primary;
 public interface CodeAnalyzer {
 
     /**
-     * Analyzes the given list of code chunks.
-     * 
-     * @param chunkedInput a list of code segments to analyze
-     * @return a string representing the analysis result or feedback
-     * @throws IOException if an input/output error occurs during analysis
-     * @throws Exception for other unexpected errors during analysis
-     */
-    String analyzeCode(List<String> chunkedInput) throws IOException, Exception;
-
-    /**
      * Parses a raw AI response string into a meaningful result or message. Not used with ChatGPT, but may be useful later.
      * 
      * @param rawResponse the raw response string from the AI service
@@ -48,4 +36,8 @@ public interface CodeAnalyzer {
      *         which will contain the feedback or analysis result
      */
     CompletableFuture<?> analyzeFile(String filename, String diffContent);
+
+    
+    CompletableFuture<?> analyzeFileLineByLine(String filename, String diffContent);
+    CompletableFuture<String> sendJavaDocPrompt(String methodText);
 }

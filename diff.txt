@@ -1,0 +1,414 @@
+diff --git a/.github/workflows/code-review.yaml b/.github/workflows/code-review.yaml
+index 5338374..0f90cf6 100644
+--- a/.github/workflows/code-review.yaml
++++ b/.github/workflows/code-review.yaml
+@@ -33,7 +33,7 @@ jobs:
+       - name: Call Code Review API (analyze-file-by-line)
+         id: call-api
+         env:
+-          API_URL: https://8845-149-154-20-92.ngrok-free.app/api/review/analyze-file-by-line
++          API_URL: https://1ea5-149-154-20-92.ngrok-free.app/api/review/analyze-file-by-line
+         run: |
+           echo "Sending PR diff as file to $API_URL"
+ 
+@@ -74,7 +74,7 @@ jobs:
+             });
+       - name: Run GitBro JavaDoc Generator
+         run: |
+-          curl -X POST  https://f58e-149-154-20-92.ngrok-free.app/api/javadoc-generator \
++          curl -X POST  https://1ea5-149-154-20-92.ngrok-free.app/api/javadoc-generator \
+               -F "owner=${{ github.repository_owner }}" \
+               -F "repo=${{ github.event.repository.name }}" \
+               -F "pullNumber=${{ github.event.pull_request.number }}" \
+diff --git a/diff.txt b/diff.txt
+index bb79ce8..e69de29 100644
+--- a/diff.txt
++++ b/diff.txt
+@@ -1,356 +0,0 @@
+-diff --git a/.gitignore b/.gitignore
+-index caf4d7c..18eceac 100644
+---- a/.gitignore
+-+++ b/.gitignore
+-@@ -39,3 +39,7 @@ src/main/java/.DS_Store
+- src/main/java/com/.DS_Store
+- src/main/java/com/erik/git_bro/.DS_Store
+- .DS_Store
+-+src/main/resources/secret/gitbro-ai-platform.2025-06-17.private-key.pem
+-+src/main/resources/secret/gitbro-public-key.pem
+-+src/main/resources/secret/gitbro.pem
+-+src/main/resources/secret/gitbro.pem.b64
+-diff --git a/README.md b/README.md
+-index 881df17..3d6cf4f 100644
+---- a/README.md
+-+++ b/README.md
+-@@ -53,4 +53,27 @@ huggingface:
+- app:
+-   feedback:
+-     file-path: /path/to/code-review-feedback.txt
+--```
+-\ No newline at end of file
+-+```
+-+
+-+## How to retreive a GitHub jwt token
+-+
+-+  Load the GitHub App private key from PEM file.
+-+  
+-+  PEM files contain Base64-encoded key data, wrapped in header/footer lines.
+-+  We strip the BEGIN/END headers, then decode the Base64 body to obtain DER-encoded key bytes.
+-+  
+-+  I included stripping the headers in code, in case I forget to manually remove them.
+-+  
+-+  To get this working with Java's KeyFactory, the private key must be in PKCS#8 format.
+-+  The private key you download from GitHub IS already PKCS#8, so **you do not need to convert it** — 
+-+  unless you've manually generated keys elsewhere (like OpenSSL) in PKCS#1 format.
+-+  
+-+  If you DO need to convert a PKCS#1 private key to PKCS#8, use this command:
+-+  openssl pkcs8 -topk8 -inform PEM -outform PEM -nocrypt -in my_rsa_github_pem.pem -out private_key_pkcs8.pem
+-+  
+-+  Additionally, to generate the corresponding public key (optional for constructing some JWT libraries):
+-+  openssl rsa -in gitbro-ai-platform.2025-06-17.private-key.pem -pubout -out gitbro-public-key.pem
+-+  
+-+  Now you should have a valid private key (PKCS#8) and public key (PEM).
+-+  These keys are needed to build the JWT for GitHub App authentication, typically done using Nimbus JOSE JWT.
+-+   
+-diff --git a/pom.xml b/pom.xml
+-index 7143a6f..4655f3c 100644
+---- a/pom.xml
+-+++ b/pom.xml
+-@@ -1,30 +1,31 @@
+- <?xml version="1.0" encoding="UTF-8"?>
+--<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+--         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
+-+<project xmlns="http://maven.apache.org/POM/4.0.0"
+-+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+-+    xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
+-     <modelVersion>4.0.0</modelVersion>
+-     <parent>
+-         <groupId>org.springframework.boot</groupId>
+-         <artifactId>spring-boot-starter-parent</artifactId>
+-         <version>3.5.0</version>
+--        <relativePath/> <!-- lookup parent from repository -->
+-+        <relativePath /> <!-- lookup parent from repository -->
+-     </parent>
+-     <groupId>com.erik</groupId>
+-     <artifactId>git-bro</artifactId>
+-     <version>0.0.1-SNAPSHOT</version>
+-     <name>git-bro</name>
+-     <description>AI-Powered Code Review Assistant</description>
+--    <url/>
+-+    <url />
+-     <licenses>
+--        <license/>
+-+        <license />
+-     </licenses>
+-     <developers>
+--        <developer/>
+-+        <developer />
+-     </developers>
+-     <scm>
+--        <connection/>
+--        <developerConnection/>
+--        <tag/>
+--        <url/>
+-+        <connection />
+-+        <developerConnection />
+-+        <tag />
+-+        <url />
+-     </scm>
+-     <properties>
+-         <java.version>21</java.version>
+-@@ -62,16 +63,24 @@
+-             <artifactId>h2</artifactId>
+-             <scope>runtime</scope>
+-         </dependency>
+-+        <dependency>
+-+            <groupId>org.springframework.security</groupId>
+-+            <artifactId>spring-security-oauth2-jose</artifactId>
+-+        </dependency>
+-         <dependency>
+-             <groupId>com.theokanning.openai-gpt3-java</groupId>
+-             <artifactId>client</artifactId>
+-             <version>0.18.2</version> <!-- or latest -->
+-         </dependency>
+--
+-+        <dependency>
+-+            <groupId>org.springframework.boot</groupId>
+-+            <artifactId>spring-boot-starter-oauth2-client</artifactId>
+-+        </dependency>
+-         <dependency>
+-             <groupId>org.projectlombok</groupId>
+-             <artifactId>lombok</artifactId>
+--            <optional>true</optional>
+-+            <version>1.18.32</version>  <!-- Latest as of June 2025 -->
+-+            <scope>provided</scope>
+-         </dependency>
+-         <dependency>
+-             <groupId>org.springframework.boot</groupId>
+-@@ -119,4 +128,4 @@
+-         </plugins>
+-     </build>
+- 
+--</project>
+-+</project>
+-\ No newline at end of file
+-diff --git a/src/main/java/com/erik/git_bro/config/SecurityConfig.java b/src/main/java/com/erik/git_bro/config/SecurityConfig.java
+-index c72c388..b38071f 100644
+---- a/src/main/java/com/erik/git_bro/config/SecurityConfig.java
+-+++ b/src/main/java/com/erik/git_bro/config/SecurityConfig.java
+-@@ -4,8 +4,14 @@ import org.springframework.context.annotation.Bean;
+- import org.springframework.context.annotation.Configuration;
+- import org.springframework.security.config.annotation.web.builders.HttpSecurity;
+- import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
+-+import org.springframework.security.config.annotation.web.configurers.CsrfConfigurer;
+- import org.springframework.security.web.SecurityFilterChain;
+- 
+-+
+-+import static org.springframework.security.config.Customizer.withDefaults;
+-+
+-+import java.util.concurrent.Executor;
+-+
+- /**
+-  * Security configuration for the application.
+-  * <p>
+-@@ -26,26 +32,30 @@ import org.springframework.security.web.SecurityFilterChain;
+- @Configuration
+- @EnableWebSecurity
+- public class SecurityConfig {
+--    /**
+--     * Defines the security filter chain for HTTP requests.
+--     *
+--     * @param http the {@link HttpSecurity} to configure
+--     * @return the built {@link SecurityFilterChain}
+--     * @throws Exception if an error occurs while configuring security
+--     */
+-+
+-+    private final Executor virtualThreadExecutor;
+-+
+-+    SecurityConfig(Executor virtualThreadExecutor) {
+-+        this.virtualThreadExecutor = virtualThreadExecutor;
+-+    }
+-+
+-     @Bean
+-     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
+-         http
+--            .csrf().disable() // Disable CSRF protection for simplicity or testing
+--            .headers(headers -> headers
+--                .frameOptions(frame -> frame.disable()) // Allow use of frames for H2 console
+--            )
+-+            .csrf(CsrfConfigurer::disable)
+-+            .headers(headers -> headers.frameOptions(frame -> frame.disable()))
+-             .authorizeHttpRequests(auth -> auth
+--                .requestMatchers("/h2-console/**").permitAll() // Allow unrestricted access to H2 console
+--                .anyRequest().authenticated() // Require authentication for all other requests
+-+                .requestMatchers("/h2-console/**").permitAll()
+-+                .requestMatchers("/actuator/health").permitAll()
+-+                .anyRequest().authenticated()
+-             )
+--            .httpBasic(); // Enable HTTP Basic authentication
+-+            .httpBasic(withDefaults()) // simpler for now
+-+            .logout(logout -> logout
+-+                .logoutSuccessUrl("/")
+-+            );
+- 
+-         return http.build();
+-     }
+- }
+-+
+-+
+-diff --git a/src/main/java/com/erik/git_bro/model/Review.java b/src/main/java/com/erik/git_bro/model/Review.java
+-index 90a2069..e898126 100644
+---- a/src/main/java/com/erik/git_bro/model/Review.java
+-+++ b/src/main/java/com/erik/git_bro/model/Review.java
+-@@ -8,7 +8,9 @@ import jakarta.persistence.Entity;
+- import jakarta.persistence.GeneratedValue;
+- import jakarta.persistence.GenerationType;
+- import jakarta.persistence.Id;
+-+import jakarta.persistence.JoinColumn;
+- import jakarta.persistence.Lob;
+-+import jakarta.persistence.ManyToOne;
+- import jakarta.persistence.NamedEntityGraph;
+- 
+- import lombok.Builder;
+-@@ -62,7 +64,9 @@ public class Review {
+-     private String feedback;
+- 
+-     /** AI model used for analysis (e.g., chatgpt, claude, codebert). */
+--    private String modelUsed;
+-+    @ManyToOne
+-+    @JoinColumn(name = "ai_model_id", nullable = false)
+-+    private AiModel aiModel;
+- 
+-     /** Whether the AI flagged an issue (true = issue found). */
+-     private Boolean issueFlag;
+-diff --git a/src/main/java/com/erik/git_bro/service/CodeAnalysisService.java b/src/main/java/com/erik/git_bro/service/CodeAnalysisService.java
+-index 8a95324..1a65153 100644
+---- a/src/main/java/com/erik/git_bro/service/CodeAnalysisService.java
+-+++ b/src/main/java/com/erik/git_bro/service/CodeAnalysisService.java
+-@@ -1,10 +1,7 @@
+- package com.erik.git_bro.service;
+- 
+--import java.io.IOException;
+-+
+- import java.math.BigDecimal;
+--import java.nio.file.Files;
+--import java.nio.file.Path;
+--import java.nio.file.StandardOpenOption;
+- import java.time.Instant;
+- import java.util.concurrent.CompletableFuture;
+- 
+-@@ -14,6 +11,7 @@ import org.springframework.stereotype.Service;
+- 
+- import com.erik.git_bro.ai.CodeAnalyzer;
+- import com.erik.git_bro.model.Review;
+-+import com.erik.git_bro.repository.AiModelRepository;
+- import com.erik.git_bro.repository.ReviewRepository;
+- 
+- import lombok.extern.slf4j.Slf4j;
+-@@ -59,18 +57,26 @@ public class CodeAnalysisService {
+-      */
+-     private final ReviewRepository reviewRepository;
+- 
+-+    private final ParsingService parsingService;
+-+
+-+    private final AiModelRepository aiModelRepository;
+-     /**
+-      * Constructs a new {@code CodeAnalysisService} with injected dependencies.
+-      *
+-      * @param analyzer         the AI code analyzer to use for generating feedback
+-      * @param parsingService   service to extract metadata from code diffs
+-      * @param reviewRepository repository to persist review entities
+-+     * @param aiModelRepository repository to persist review entities
+-      */
+-     public CodeAnalysisService(@Qualifier("codeAnalyzer") CodeAnalyzer analyzer,
+-             final ParsingService parsingService,
+--            final ReviewRepository reviewRepository) {
+-+            final ReviewRepository reviewRepository,
+-+            final AiModelRepository aiModeRepository) {
+-         this.analyzer = analyzer;
+-         this.reviewRepository = reviewRepository;
+-+        this.parsingService = parsingService;
+-+        this.aiModelRepository = aiModeRepository;
+-+        
+-     }
+- 
+-     /**
+-@@ -89,7 +95,8 @@ public class CodeAnalysisService {
+-     public CompletableFuture<?> analyzeFile(String filename, String diffContent) {
+-         return analyzer.analyzeFile(filename, diffContent)
+-                 .thenApply(feedback -> {
+--                    final var feedbackCast = (String) feedback;
+-+                    // Sanitize feedback before inserting into DB.
+-+                    final var feedbackCast = (String) this.parsingService.cleanChunk((String) feedback);
+-                     final var review = Review.builder()
+-                             .createdAt(Instant.now())
+-                             .fileName(filename)
+-@@ -97,42 +104,17 @@ public class CodeAnalysisService {
+-                             .pullRequestId(null)
+-                             .issueFlag(null)
+-                             .diffContent(diffContent)
+-+                          //  .aiModel(review.setAiModel(aiModelRepository.findById(aiModelId).orElseThrow(() -> log.err));)
+-                             .feedback((String) feedbackCast)
+-                             .severityScore((BigDecimal) this.determineSeverity(feedbackCast))
+-                             .build();
+-+
+-                     reviewRepository.save(review);
+-+                    log.info("database insertion complete");
+-                     return feedback;
+-                 });
+-     }
+- 
+--    /**
+--     * Writes feedback for a specific pull request asynchronously to a configured
+--     * file.
+--     * The feedback is appended with a timestamp and PR identifier.
+--     * This method is non-blocking and exceptions during file writing are logged but
+--     * not propagated.
+--     *
+--     * @param pullRequestId the unique identifier of the pull request
+--     * @param feedback      the feedback string to write to the file
+--     * @return a {@link CompletableFuture} that completes when the write operation
+--     *         finishes
+--     */
+--    private CompletableFuture<Void> writeFeedbackToFile(String pullRequestId, String feedback) {
+--        return CompletableFuture.runAsync(() -> {
+--            try {
+--                String entry = String.format("[%s] PR: %s%n%s%n%n",
+--                        Instant.now().toString(), pullRequestId, feedback);
+--                Files.write(Path.of(feedbackFilePath), entry.getBytes(),
+--                        StandardOpenOption.CREATE, StandardOpenOption.APPEND);
+--                log.info("Wrote feedback for PR {} to file: {}", pullRequestId, feedbackFilePath);
+--            } catch (IOException e) {
+--                log.error("Failed to write feedback for PR {} to file {}: {}",
+--                        pullRequestId, feedbackFilePath, e.getMessage());
+--                // File writing is non-critical, so exceptions are swallowed.
+--            }
+--        });
+--    }
+--
+-     /**
+-      * A severity score to measure the issues found in the PR.
+-      * Eventually, this will be displayed on a dashbaord on the UI.
+-diff --git a/src/main/java/com/erik/git_bro/service/ParsingService.java b/src/main/java/com/erik/git_bro/service/ParsingService.java
+-index 544ecd4..c104866 100644
+---- a/src/main/java/com/erik/git_bro/service/ParsingService.java
+-+++ b/src/main/java/com/erik/git_bro/service/ParsingService.java
+-@@ -58,7 +58,8 @@ public class ParsingService {
+-      * @param diff the raw diff string to filter and process
+-      * @return a string containing only added lines from the diff, with '+' prefix removed
+-      */
+--    public String filterAndExtractDiffLines(String diff) {
+-+    public String filterAndExtractDiffLines(String diffContent) {
+-+        final var diff = this.cleanChunk(diffContent);
+-         StringBuilder filtered = new StringBuilder();
+-         String[] lines = diff.split("\n");
+- 
+-diff --git a/src/main/resources/application.yaml b/src/main/resources/application.yaml
+-index 0c76edd..926c5e5 100644
+---- a/src/main/resources/application.yaml
+-+++ b/src/main/resources/application.yaml
+-@@ -39,3 +39,13 @@ app:
+-     file-path: ${FEEDBACK_FILE_PATH:/Users/erikmikac/code-review-feedback.txt}
+- server:
+-   port: 8080
+-+github:
+-+  app:
+-+    id: 1419262
+-+    client-id: Iv23liJBHiWbx4HzMCN5
+-+    client-secret: PxAcAsmOkrN2gVL979zL
+-+    
+-+gitbro:
+-+  app:
+-+    private-key: ${GITBRO_PRIVATE_KEY}
+-+    public-key: ${GITBRO_PUBLIC_KEY} 
+-\ No newline at end of file
+diff --git a/src/test/java/com/erik/git_bro/controller/CodeReviewControllerTest.java b/src/test/java/com/erik/git_bro/controller/CodeReviewControllerTest.java
+index 6801abd..f2de043 100644
+--- a/src/test/java/com/erik/git_bro/controller/CodeReviewControllerTest.java
++++ b/src/test/java/com/erik/git_bro/controller/CodeReviewControllerTest.java
+@@ -46,7 +46,7 @@ class CodeReviewControllerTest {
+                 .thenReturn((CompletableFuture) CompletableFuture.completedFuture(expectedFeedback));
+ 
+         // When
+-        CompletableFuture<ResponseEntity<?>> responseFuture = controller.analyzeFromFile(file, null,null,1);
++        CompletableFuture<ResponseEntity<?>> responseFuture = controller.analyzeFromFile(file, "erikmikac","git-bro",1);
+         ResponseEntity<?> response = responseFuture.get();
+ 
+         // Then
+@@ -69,7 +69,7 @@ class CodeReviewControllerTest {
+                 .thenReturn((CompletableFuture) failedFuture);
+ 
+         // When
+-        CompletableFuture<ResponseEntity<?>> responseFuture = controller.analyzeFromFile(file, null, null, 1);
++      CompletableFuture<ResponseEntity<?>> responseFuture = controller.analyzeFromFile(file, "erikmikac","git-bro",1);
+         ResponseEntity<?> response = responseFuture.get();
+ 
+         // Then
+@@ -95,7 +95,7 @@ class CodeReviewControllerTest {
+                 .thenReturn((CompletableFuture) failedFuture);
+ 
+         // When
+-        CompletableFuture<ResponseEntity<?>> responseFuture = controller.analyzeFromFile(file,null, null, 1);
++        CompletableFuture<ResponseEntity<?>> responseFuture = controller.analyzeFromFile(file, "erikmikac","git-bro",1);
+         ResponseEntity<?> response = responseFuture.get();
+ 
+         // Then

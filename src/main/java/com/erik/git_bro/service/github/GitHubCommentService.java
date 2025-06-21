@@ -28,10 +28,11 @@ public class GitHubCommentService {
         int pullNumber,
         String filePath,
         int lineNumber,
-        String commentBody) throws IOException {
+        String commentBody,
+        String sha) throws IOException {
 
     String url = String.format(
-        "https://api.github.com/repos/%s/%s/pulls/%d/comments",
+        "https://api.github.com/repos/%s/%s/pulls/%d/reviews",
         owner, repo, pullNumber);
 
     // Build request body
@@ -39,7 +40,8 @@ public class GitHubCommentService {
         "path", filePath,
         "line", lineNumber,
         "side", "RIGHT", // always use "RIGHT" unless you're doing diff hunk parsing
-        "body", commentBody
+        "body", commentBody,
+        "commit_id", sha
     );
 
     String jsonBody = objectMapper.writeValueAsString(json);

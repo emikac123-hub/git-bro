@@ -1,5 +1,6 @@
 package com.erik.git_bro.model;
 
+import java.math.BigDecimal;
 import java.time.Instant;
 
 import jakarta.persistence.Column;
@@ -7,7 +8,9 @@ import jakarta.persistence.Entity;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
+import jakarta.persistence.JoinColumn;
 import jakarta.persistence.Lob;
+import jakarta.persistence.ManyToOne;
 import jakarta.persistence.NamedEntityGraph;
 import lombok.Builder;
 import lombok.Data;
@@ -16,15 +19,12 @@ import lombok.Data;
  * Entity representing a code review for a pull request.
  * <p>
  * Stores information about the pull request, the file path analyzed,
- * the original diff content, the AI-generated feedback, and the creation timestamp.
+ * the original diff content, the AI-generated feedback, the creation timestamp,
+ * and metadata such as model used and severity score.
  * </p>
  * <p>
  * This entity is persisted in the database with large object (CLOB) support
  * for diff content and feedback fields.
- * </p>
- * <p>
- * The {@code Review} entity uses {@code @NamedEntityGraph} to allow
- * specification of fetch graphs if needed (currently no attributes specified).
  * </p>
  * 
  * @author erikmikac
@@ -35,43 +35,44 @@ import lombok.Data;
 @NamedEntityGraph(name = "Review.all", attributeNodes = {})
 public class Review {
 
-    /**
-     * The unique identifier for the review record.
-     * This is generated automatically by the persistence provider.
-     */
+    /** Unique identifier for the review record. */
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    /**
-     * The ID of the pull request associated with this review.
-     * This may be null if not set.
-     */
+    /** Optional ID of the pull request associated with this review. */
     private String pullRequestId;
 
-    /**
-     * The file path of the source file related to the review.
-     */
-    private String filePath;
+    /** GitHub username or internal user identifier. */
+    private String userId;
 
-    /**
-     * The original diff content of the code changes being reviewed.
-     * Stored as a Character Large Object (CLOB) in the database.
-     */
+    /** URL to the pull request. */
+    private String prUrl;
+
+    /** File path of the source file related to the review. */
+    private String fileName;
+
+    /** Original diff content of the code changes. */
     @Lob
     @Column(name = "diff_content", columnDefinition = "CLOB")
     private String diffContent;
 
-    /**
-     * The AI-generated feedback or comments on the code changes.
-     * Stored as a Character Large Object (CLOB) in the database.
-     */
+    /** AI-generated feedback. */
     @Lob
     @Column(name = "feedback", columnDefinition = "CLOB")
     private String feedback;
 
-    /**
-     * Timestamp of when the review was created.
-     */
+    /** AI model used for analysis (e.g., chatgpt, claude, codebert). */
+    @ManyToOne
+    @JoinColumn(name = "ai_model_id", nullable = true)
+    private AiModel aiModel;
+
+    /** Whether the AI flagged an issue (true = issue found). */
+    private Boolean issueFlag;
+
+    /** Optional severity score (0.0–1.0) for issue impact. */
+    private BigDecimal severityScore;
+
+    /** Timestamp when the review was created. */
     private Instant createdAt;
 }
