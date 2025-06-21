@@ -33,7 +33,7 @@ public class GitHubCommentService {
         String sha) throws IOException {
 
     String url = String.format(
-        "https://api.github.com/repos/%s/%s/pulls/%d/comments",
+        "https://api.github.com/repos/%s/%s/pulls/%d/reviews",
         owner, repo, pullNumber);
 
     // Build request body

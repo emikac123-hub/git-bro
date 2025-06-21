@@ -39,4 +39,5 @@ public interface CodeAnalyzer {
 
     
     CompletableFuture<?> analyzeFileLineByLine(String filename, String diffContent);
+    CompletableFuture<String> sendJavaDocPrompt(String methodText);
 }

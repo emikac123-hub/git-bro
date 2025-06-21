@@ -13,22 +13,25 @@ import com.fasterxml.jackson.databind.ObjectMapper;
  * the OpenAI ChatGPT API via {@link ChatGPTClient} to analyze code changes.
  * <p>
  * This component sends code diffs or chunks of code to the ChatGPT service
- * for AI-driven analysis and parses the JSON response to extract meaningful feedback.
+ * for AI-driven analysis and parses the JSON response to extract meaningful
+ * feedback.
  * </p>
  * <p>
  * Supports asynchronous analysis of entire files through the
- * {@link #analyzeFile(String, String)} method, returning a {@link CompletableFuture}.
+ * {@link #analyzeFile(String, String)} method, returning a
+ * {@link CompletableFuture}.
  * </p>
  */
 @Component("chatGptAnalyzer")
 public class ChatGptAnalyzer implements CodeAnalyzer {
 
     private final ChatGPTClient client;
-   
+
     /**
      * Constructs a new {@code ChatGptAnalyzer} with the given ChatGPT client.
      *
-     * @param client the {@link ChatGPTClient} used to communicate with the ChatGPT API
+     * @param client the {@link ChatGPTClient} used to communicate with the ChatGPT
+     *               API
      */
     public ChatGptAnalyzer(ChatGPTClient client) {
         this.client = client;
@@ -87,8 +90,10 @@ public class ChatGptAnalyzer implements CodeAnalyzer {
     }
 
     /**
-     * Asynchronously analyzes the code diff of a file by delegating to the ChatGPT client.
-     * Returns a {@link CompletableFuture} that completes with the AI-generated feedback.
+     * Asynchronously analyzes the code diff of a file by delegating to the ChatGPT
+     * client.
+     * Returns a {@link CompletableFuture} that completes with the AI-generated
+     * feedback.
      *
      * @param filename    the name of the file being analyzed
      * @param diffContent the diff content to analyze
@@ -97,6 +102,11 @@ public class ChatGptAnalyzer implements CodeAnalyzer {
     @Override
     public CompletableFuture<?> analyzeFile(String filename, String diffContent) {
         return this.client.analyzeFile(filename, diffContent);
+    }
+
+    @Override
+    public CompletableFuture<String> sendJavaDocPrompt(String methodText) {
+        return this.client.sendJavaDocPrompt(methodText);
     }
 
 }
