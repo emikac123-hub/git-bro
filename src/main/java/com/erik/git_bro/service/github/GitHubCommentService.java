@@ -22,7 +22,7 @@ public class GitHubCommentService {
     private final OkHttpClient okClient = new OkHttpClient();
     private final ObjectMapper objectMapper = new ObjectMapper();
 
-    
+
     public void postInlineComment(
         String githubToken,
         String owner,
@@ -40,6 +40,7 @@ public class GitHubCommentService {
     // Build request body
     Map<String, Object> json = Map.of(
         "path", filePath,
+        "event", "COMMENT", // Adding this, otherwise review is default to PENDING state and additonal comments can't be made.
         "line", lineNumber,
         "side", "RIGHT", // always use "RIGHT" unless you're doing diff hunk parsing
         "body", commentBody,
