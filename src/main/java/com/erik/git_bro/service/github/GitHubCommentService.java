@@ -21,6 +21,8 @@ public class GitHubCommentService {
 
     private final OkHttpClient okClient = new OkHttpClient();
     private final ObjectMapper objectMapper = new ObjectMapper();
+
+    
     public void postInlineComment(
         String githubToken,
         String owner,
@@ -44,6 +46,7 @@ public class GitHubCommentService {
         "commit_id", sha
     );
 
+    
     String jsonBody = objectMapper.writeValueAsString(json);
 
     Request request = new Request.Builder()
