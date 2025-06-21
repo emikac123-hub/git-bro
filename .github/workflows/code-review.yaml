@@ -33,7 +33,7 @@ jobs:
       - name: Call Code Review API (analyze-file-by-line)
         id: call-api
         env:
-          API_URL: https://8845-149-154-20-92.ngrok-free.app/api/review/analyze-file-by-line
+          API_URL: https://1ea5-149-154-20-92.ngrok-free.app/api/review/analyze-file-by-line
         run: |
           echo "Sending PR diff as file to $API_URL"
 
@@ -74,7 +74,7 @@ jobs:
             });
       - name: Run GitBro JavaDoc Generator
         run: |
-          curl -X POST  https://f58e-149-154-20-92.ngrok-free.app/api/javadoc-generator \
+          curl -X POST  https://1ea5-149-154-20-92.ngrok-free.app/api/javadoc-generator \
               -F "owner=${{ github.repository_owner }}" \
               -F "repo=${{ github.event.repository.name }}" \
               -F "pullNumber=${{ github.event.pull_request.number }}" \

@@ -46,7 +46,7 @@ class CodeReviewControllerTest {
                 .thenReturn((CompletableFuture) CompletableFuture.completedFuture(expectedFeedback));
 
         // When
-        CompletableFuture<ResponseEntity<?>> responseFuture = controller.analyzeFromFile(file, null,null,1);
+        CompletableFuture<ResponseEntity<?>> responseFuture = controller.analyzeFromFile(file, "erikmikac","git-bro",1);
         ResponseEntity<?> response = responseFuture.get();
 
         // Then
@@ -69,7 +69,7 @@ class CodeReviewControllerTest {
                 .thenReturn((CompletableFuture) failedFuture);
 
         // When
-        CompletableFuture<ResponseEntity<?>> responseFuture = controller.analyzeFromFile(file, null, null, 1);
+      CompletableFuture<ResponseEntity<?>> responseFuture = controller.analyzeFromFile(file, "erikmikac","git-bro",1);
         ResponseEntity<?> response = responseFuture.get();
 
         // Then
@@ -95,7 +95,7 @@ class CodeReviewControllerTest {
                 .thenReturn((CompletableFuture) failedFuture);
 
         // When
-        CompletableFuture<ResponseEntity<?>> responseFuture = controller.analyzeFromFile(file,null, null, 1);
+        CompletableFuture<ResponseEntity<?>> responseFuture = controller.analyzeFromFile(file, "erikmikac","git-bro",1);
         ResponseEntity<?> response = responseFuture.get();
 
         // Then
