@@ -58,10 +58,18 @@ app:
     file-path: /path/to/code-review-feedback.txt
 ```
 
-## How to retreive a GitHub jwt token
+## How GitHub JWT Tokens are Retrieved Programmatically
 
+  ### Why Do I need one?
+  GitHub JWT Tokens are required for every request made to GitHub. This app needs to do that a lot.
+
+  ### How Do I do that?
+
+  Retreive a PEM file from GitHub.
+
+  ### How Does It Work in the Code?
   Load the GitHub App private key from PEM file.
-  
+
   PEM files contain Base64-encoded key data, wrapped in header/footer lines.
   We strip the BEGIN/END headers, then decode the Base64 body to obtain DER-encoded key bytes.
   
