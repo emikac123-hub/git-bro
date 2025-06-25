@@ -158,6 +158,7 @@ public class CodeReviewController {
                                     .append("  - **Comment**: ").append(issue.getComment().replaceAll("\n", " ").trim())
                                     .append("\n\n");
                         }
+                        this.gitHubCommentService.postReviewCommentBatch(token, owner, repo, pullNumber, inlineResponse.getIssues());
 
                         return ResponseEntity.ok()
                                 .body(markdownSummary.toString().trim());

@@ -1,10 +1,14 @@
 package com.erik.git_bro.service.github;
 
 import java.io.IOException;
+import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
+import java.util.stream.Collectors;
 
 import org.springframework.stereotype.Service;
 
+import com.erik.git_bro.dto.Issue;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
 import lombok.AllArgsConstructor;
@@ -60,20 +64,28 @@ public class GitHubCommentService {
             }
 
             log.info("Successfully posted PR inline comment on {} line {}", filePath, lineNumber);
-            this.postInlineComments(githubToken, owner, repo, pullNumber, filePath, lineNumber, commentBody, sha, commentBody);
+
         }
     }
 
-    public void postInlineComments(
+    public void postReviewCommentBatch(
             String githubToken,
             String owner,
             String repo,
             int pullNumber,
-            String filePath,
-            int lineNumber,
-            String commentBody,
-            String sha,
-            String reviewComments) throws IOException {
+            List<Issue> issues) throws IOException {
+
+        // Convert each Issue to a GitHub review comment map
+        List<Map<String, Object>> reviewComments = issues.stream()
+                .map(issue -> {
+                    Map<String, Object> comment = new HashMap<>();
+                    comment.put("path", issue.getFile());
+                    comment.put("line", issue.getLine());
+                    comment.put("side", "RIGHT");
+                    comment.put("body", issue.getComment());
+                    return comment;
+                })
+                .collect(Collectors.toList());
 
         Map<String, Object> reviewBody = Map.of(
                 "body", "AI Review: Suggested inline improvements.",
@@ -93,9 +105,10 @@ public class GitHubCommentService {
 
         try (Response response = okClient.newCall(request).execute()) {
             if (!response.isSuccessful()) {
-                throw new IOException("GitHub comment failed: " + response.code() + " " + response.body().string());
+                throw new IOException("GitHub review failed: " + response.code() + " " + response.body().string());
             }
-            log.info("Successfully posted PR inline comment on {} line {}", filePath, lineNumber);
+            log.info("✅ Successfully posted AI review with {} comments.", issues.size());
         }
     }
+
 }
