@@ -17,6 +17,8 @@
 
 ## 📁 Project Structure
 
+```yaml
+
 src
 ├── main
 │ ├── java/com/erik/git_bro
@@ -29,7 +31,7 @@ src
 │ └── resources
 │ ├── application.yaml
 │ └── db/changelog # Liquibase changelogs
-
+```
 
 ---
 
@@ -38,6 +40,7 @@ src
 ### `application.yaml`
 
 ```yaml
+
 spring:
   datasource:
     url: jdbc:h2:mem:codereview
@@ -88,3 +91,14 @@ to start the server. Then, copy and paste it into the work flow step "Call Code 
 
        API_URL: https://1102-149-154-20-92.ngrok-free.app/api/review/analyze-file
 ```
+
+
+## MVP Feature Set
+
+Feature           |
+-----------------------------------------------
+
+JavaDoc on PR     |
+Drag-and-Drop Zip |
+Inline Comments   |
+Overall Comment   |
