@@ -10,6 +10,7 @@ import org.springframework.stereotype.Service;
 
 import com.erik.git_bro.ai.CodeAnalyzer;
 import com.erik.git_bro.model.Review;
+import com.erik.git_bro.service.ParsingService;
 import com.erik.git_bro.repository.AiModelRepository;
 import com.erik.git_bro.repository.ReviewRepository;
 
