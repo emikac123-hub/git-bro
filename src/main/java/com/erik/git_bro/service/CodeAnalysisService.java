@@ -146,7 +146,6 @@ public class CodeAnalysisService {
                             .feedback((String) feedbackCast)
                             .severityScore((BigDecimal) this.determineSeverity(feedbackCast))
                             .build();
-
                     reviewRepository.save(review);
                     log.info("database insertion complete");
                     return feedback;

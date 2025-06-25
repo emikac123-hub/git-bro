@@ -2,7 +2,9 @@ package com.erik.git_bro.service;
 
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
@@ -16,20 +18,25 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 
 /**
- * Service class responsible for parsing and processing git diff content and JSON inputs.
+ * Service class responsible for parsing and processing git diff content and
+ * JSON inputs.
  * <p>
  * This class provides utilities to:
  * <ul>
- *   <li>Filter and extract relevant diff lines (added/removed code lines).</li>
- *   <li>Clean illegal control characters from diff chunks.</li>
- *   <li>Extract file paths from diff metadata.</li>
- *   <li>Split diffs into smaller chunks by line count.</li>
- *   <li>Parse JSON input strings safely, returning special indicators for null or malformed input.</li>
+ * <li>Filter and extract relevant diff lines (added/removed code lines).</li>
+ * <li>Clean illegal control characters from diff chunks.</li>
+ * <li>Extract file paths from diff metadata.</li>
+ * <li>Split diffs into smaller chunks by line count.</li>
+ * <li>Parse JSON input strings safely, returning special indicators for null or
+ * malformed input.</li>
  * </ul>
  * <p>
- * Designed for integration with services that analyze or review code changes and parse structured JSON payloads.
+ * Designed for integration with services that analyze or review code changes
+ * and parse structured JSON payloads.
  * 
- * <p><b>Note:</b> This class uses {@code lombok} annotations for constructor injection and logging.
+ * <p>
+ * <b>Note:</b> This class uses {@code lombok} annotations for constructor
+ * injection and logging.
  * 
  * @author Erik
  * @since 1.0
@@ -50,13 +57,17 @@ public class ParsingService {
     private final String MALFORMED_JSON = "Malformed JSON";
 
     /**
-     * Filters the provided diff string and extracts only lines that represent actual code changes.
+     * Filters the provided diff string and extracts only lines that represent
+     * actual code changes.
      * <p>
-     * Keeps lines starting with '+' or '-', excluding diff metadata lines like '+++' or '---'.
-     * Then extracts only the added lines (starting with '+') without the '+' prefix.
+     * Keeps lines starting with '+' or '-', excluding diff metadata lines like
+     * '+++' or '---'.
+     * Then extracts only the added lines (starting with '+') without the '+'
+     * prefix.
      * 
      * @param diff the raw diff string to filter and process
-     * @return a string containing only added lines from the diff, with '+' prefix removed
+     * @return a string containing only added lines from the diff, with '+' prefix
+     *         removed
      */
     public String filterAndExtractDiffLines(String diffContent) {
         final var diff = this.cleanChunk(diffContent);
@@ -75,7 +86,8 @@ public class ParsingService {
     }
 
     /**
-     * Cleans a diff chunk by removing illegal control characters except common whitespace (carriage return, newline, tab).
+     * Cleans a diff chunk by removing illegal control characters except common
+     * whitespace (carriage return, newline, tab).
      * 
      * @param chunk the diff chunk to clean
      * @return a cleaned string with illegal control characters removed
@@ -103,7 +115,8 @@ public class ParsingService {
     /**
      * Extracts the file path from a diff header line.
      * <p>
-     * Searches for lines matching the pattern "+++ b/<file_path>" and returns the extracted file path.
+     * Searches for lines matching the pattern "+++ b/<file_path>" and returns the
+     * extracted file path.
      * If no match is found, returns "unknown".
      * 
      * @param diffContent the full diff content string
@@ -116,9 +129,10 @@ public class ParsingService {
     }
 
     /**
-     * Splits a diff string into smaller chunks, each containing up to {@code maxLinesPerChunk} lines.
+     * Splits a diff string into smaller chunks, each containing up to
+     * {@code maxLinesPerChunk} lines.
      * 
-     * @param diff the diff string to split
+     * @param diff             the diff string to split
      * @param maxLinesPerChunk the maximum number of lines per chunk
      * @return a list of diff chunks as strings
      */
@@ -145,10 +159,12 @@ public class ParsingService {
     /**
      * Extracts the value of the "input" field from a JSON string.
      * <p>
-     * Returns special constant messages if the input is null or the JSON is malformed.
+     * Returns special constant messages if the input is null or the JSON is
+     * malformed.
      * 
      * @param jsonString the JSON string to parse
-     * @return the text content of the "input" field, or a special message if null or malformed
+     * @return the text content of the "input" field, or a special message if null
+     *         or malformed
      */
     public String extractInput(String jsonString) {
         try {
@@ -187,5 +203,26 @@ public class ParsingService {
      */
     public boolean isNullJSONVal(final String output) {
         return NULL_INPUT.equals(output);
+    }
+
+    public Set<Integer> extractCommentableLines(String patch) {
+        Set<Integer> commentableLines = new HashSet<>();
+        String[] lines = patch.split("\n");
+
+        int newLineNum = -1;
+        for (String line : lines) {
+            if (line.startsWith("@@")) {
+                Matcher matcher = Pattern.compile("\\+([0-9]+)").matcher(line);
+                if (matcher.find()) {
+                    newLineNum = Integer.parseInt(matcher.group(1)) - 1;
+                }
+            } else if (line.startsWith("+") && !line.startsWith("+++")) {
+                commentableLines.add(++newLineNum);
+            } else if (!line.startsWith("-")) {
+                newLineNum++;
+            }
+        }
+
+        return commentableLines;
     }
 }

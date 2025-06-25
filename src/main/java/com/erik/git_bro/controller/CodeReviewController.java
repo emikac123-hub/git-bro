@@ -2,6 +2,9 @@ package com.erik.git_bro.controller;
 
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
+import java.util.List;
+import java.util.Optional;
+import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 
 import org.springframework.http.MediaType;
@@ -12,10 +15,12 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.multipart.MultipartFile;
 
+import com.erik.git_bro.dto.GitDiff;
 import com.erik.git_bro.dto.InlineReviewResponse;
 import com.erik.git_bro.dto.Issue;
 import com.erik.git_bro.model.ErrorResponse;
 import com.erik.git_bro.service.CodeAnalysisService;
+import com.erik.git_bro.service.ParsingService;
 import com.erik.git_bro.service.github.GitHubAppService;
 import com.erik.git_bro.service.github.GitHubCommentService;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -39,7 +44,7 @@ public class CodeReviewController {
 
     private final ObjectMapper objectMapper = new ObjectMapper();
     private final CodeAnalysisService codeAnalysisService;
-
+    private final ParsingService parsingService;
     private final GitHubAppService gitHubAppService;
     private final GitHubCommentService gitHubCommentService;
 
@@ -101,25 +106,44 @@ public class CodeReviewController {
 
                     try {
                         final String installationId = gitHubAppService.getInstallationId(owner, repo);
-                        final String sha = gitHubAppService.getCommitSHA(owner, repo, pullNumber);        
+                        final String sha = gitHubAppService.getSha(owner, repo, pullNumber);
                         final String token = gitHubAppService.getInstallationToken(Long.parseLong(installationId));
                         final String cleanFeedback = ((String) feedback)
                                 .replaceAll("(?s)```json\\s*", "")
                                 .replaceAll("(?s)```", "")
                                 .trim();
-
+                        final List<GitDiff> diffsFromPr = this.gitHubAppService.getDiffs(owner, repo, pullNumber);
                         InlineReviewResponse inlineResponse = objectMapper.readValue(cleanFeedback,
                                 InlineReviewResponse.class);
                         for (Issue issue : inlineResponse.getIssues()) {
-                            gitHubCommentService.postInlineComment(
-                                    token,
-                                    owner,
-                                    repo,
-                                    pullNumber,
-                                    issue.getFile(),
-                                    issue.getLine(),
-                                    issue.getComment(),
-                                    sha);
+                            String issueFile = issue.getFile();
+                            int line = issue.getLine();
+                            String comment = issue.getComment();
+
+                            // Find the matching GitDiff
+                            Optional<GitDiff> matchingDiff = diffsFromPr.stream()
+                                    .filter(d -> d.getFilename().equals(issueFile))
+                                    .findFirst();
+
+                            if (matchingDiff.isPresent()) {
+                                Set<Integer> validLines = this.parsingService.extractCommentableLines(matchingDiff.get().getPatch());
+
+                                if (validLines.contains(line)) {
+                                    gitHubCommentService.postInlineComment(
+                                            token,
+                                            owner,
+                                            repo,
+                                            pullNumber,
+                                            issueFile,
+                                            line,
+                                            comment,
+                                            sha);
+                                } else {
+                                    log.warn("Skipping comment: line {} in {} is not part of diff.", line, file);
+                                }
+                            } else {
+                                log.warn("No diff found for file: {}", file);
+                            }
                         }
 
                         return ResponseEntity.ok()
