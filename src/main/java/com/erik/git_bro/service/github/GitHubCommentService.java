@@ -22,7 +22,8 @@ public class GitHubCommentService {
 
     private final OkHttpClient okClient = new OkHttpClient();
     private final ObjectMapper objectMapper = new ObjectMapper();
-    public void postInlineComment(
+
+    public void postBlockComments(
             String githubToken,
             String owner,
             String repo,
@@ -51,6 +52,43 @@ public class GitHubCommentService {
                 .header("Authorization", "Bearer " + githubToken)
                 .header("Accept", "application/vnd.github+json")
                 .post(RequestBody.create(jsonBody, MediaType.parse("application/json")))
+                .build();
+
+        try (Response response = okClient.newCall(request).execute()) {
+            if (!response.isSuccessful()) {
+                throw new IOException("GitHub comment failed: " + response.code() + " " + response.body().string());
+            }
+
+            log.info("Successfully posted PR inline comment on {} line {}", filePath, lineNumber);
+            this.postInlineComments(githubToken, owner, repo, pullNumber, filePath, lineNumber, commentBody, sha, commentBody);
+        }
+    }
+
+    public void postInlineComments(
+            String githubToken,
+            String owner,
+            String repo,
+            int pullNumber,
+            String filePath,
+            int lineNumber,
+            String commentBody,
+            String sha,
+            String reviewComments) throws IOException {
+
+        Map<String, Object> reviewBody = Map.of(
+                "body", "AI Review: Suggested inline improvements.",
+                "event", "COMMENT",
+                "comments", reviewComments);
+
+        String reviewUrl = String.format(
+                "https://api.github.com/repos/%s/%s/pulls/%d/reviews", owner, repo, pullNumber);
+
+        Request request = new Request.Builder()
+                .url(reviewUrl)
+                .header("Authorization", "Bearer " + githubToken)
+                .header("Accept", "application/vnd.github+json")
+                .post(RequestBody.create(objectMapper.writeValueAsString(reviewBody),
+                        MediaType.parse("application/json")))
                 .build();
 
         try (Response response = okClient.newCall(request).execute()) {

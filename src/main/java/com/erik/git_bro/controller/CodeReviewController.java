@@ -130,7 +130,7 @@ public class CodeReviewController {
                                         .extractCommentableLines(matchingDiff.get().getPatch());
 
                                 if (validLines.contains(line)) {
-                                    gitHubCommentService.postInlineComment(
+                                    gitHubCommentService.postBlockComments(
                                             token,
                                             owner,
                                             repo,
