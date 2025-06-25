@@ -61,5 +61,4 @@ public class GitHubCommentService {
             log.info("✅ Successfully posted PR inline comment on {} line {}", filePath, lineNumber);
         }
     }
-
 }
