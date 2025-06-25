@@ -8,6 +8,8 @@ import java.util.List;
 
 import org.springframework.stereotype.Service;
 
+import com.erik.git_bro.dto.GitDiff;
+import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
@@ -122,7 +124,7 @@ public class GitHubAppService {
         return repoNodes.findValuesAsText("full_name");
     }
 
-    public String getCommitSHA(final String owner, final String repo, final int pullNumber) throws Exception {
+    public String getSha(final String owner, final String repo, final int pullNumber) throws Exception {
         final String installationId = getInstallationId(owner, repo);
         final String token = getInstallationToken(Long.parseLong(installationId));
         log.info("installationId: {}", installationId);
@@ -141,5 +143,31 @@ public class GitHubAppService {
 
         final JsonNode jsonNode = objectMapper.readTree(response.body());
         return jsonNode.get("head").get("sha").asText();
+    }
+
+    public List<GitDiff> getDiffs(final String owner, final String repo, final int pullNumber) throws Exception {
+        final String installationId = getInstallationId(owner, repo);
+        final String token = getInstallationToken(Long.parseLong(installationId));
+        log.info("installationId: {}", installationId);
+        final HttpClient client = HttpClient.newHttpClient();
+        final HttpRequest request = HttpRequest.newBuilder()
+                .uri(URI.create(
+                        "https://api.github.com/repos/" + owner + "/" + repo + "/pulls/" + pullNumber + "/files"))
+                .header("Authorization", "Bearer " + token)
+                .header("Accept", "application/vnd.github+json")
+                .GET()
+                .build();
+
+        final HttpResponse<String> response = client.send(request, HttpResponse.BodyHandlers.ofString());
+        if (response.statusCode() != 200) {
+            throw new RuntimeException("Failed to get Diff: " + response.body());
+        }
+        log.info("REPONSE: {}", response.body());
+
+        final List<GitDiff> diffs = objectMapper.readValue(
+                response.body(),
+                new TypeReference<List<GitDiff>>() {
+                });
+        return diffs;
     }
 }
