@@ -5,7 +5,6 @@ import java.util.Map;
 
 import org.springframework.stereotype.Service;
 
-import com.erik.git_bro.service.ParsingService;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
 import lombok.AllArgsConstructor;
@@ -23,8 +22,6 @@ public class GitHubCommentService {
 
     private final OkHttpClient okClient = new OkHttpClient();
     private final ObjectMapper objectMapper = new ObjectMapper();
-    private final ParsingService parsingService;
-
     public void postInlineComment(
             String githubToken,
             String owner,
