@@ -1,5 +1,9 @@
 package com.erik.git_bro.service.github;
 
+import java.net.URI;
+import java.net.http.HttpClient;
+import java.net.http.HttpRequest;
+import java.net.http.HttpResponse;
 import java.security.KeyFactory;
 import java.security.interfaces.RSAPrivateKey;
 import java.security.interfaces.RSAPublicKey;
@@ -15,6 +19,8 @@ import org.springframework.security.oauth2.jwt.JwtEncoderParameters;
 import org.springframework.security.oauth2.jwt.NimbusJwtEncoder;
 import org.springframework.stereotype.Service;
 
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.nimbusds.jose.jwk.RSAKey;
 import com.nimbusds.jose.jwk.source.ImmutableJWKSet;
 import com.nimbusds.jose.jwk.source.JWKSource;
@@ -27,6 +33,12 @@ import lombok.extern.slf4j.Slf4j;
 @RequiredArgsConstructor
 @Slf4j
 public class GitHubAppTokenService {
+
+
+
+    // got that here: https://github.com/settings/installations/71819645
+    private final String INSTALLATION_ID = "71819645"; // TODO - Remove becuase this is my personal installation ID used for testing.
+    private ObjectMapper objectMapper = new ObjectMapper();
 
     @Value("${github.app.id}")
     private String appId;
@@ -114,6 +126,77 @@ public class GitHubAppTokenService {
 
         log.info("Generated GitHub App JWT: {}", jwt.getTokenValue());
         return jwt.getTokenValue();
+    }
+
+      /**
+     * Exchange the app JWT for an installation access token. This is for my own
+     * app.
+     * 
+     * @throws Exception
+     */
+    public String getInstallationToken() throws Exception {
+        final String jwt = createJwtToken();
+
+        final HttpClient client = HttpClient.newHttpClient();
+        final HttpRequest request = HttpRequest.newBuilder()
+                .uri(URI.create("https://api.github.com/app/installations/" + INSTALLATION_ID + "/access_tokens"))
+                .header("Authorization", "Bearer " + jwt)
+                .header("Accept", "application/vnd.github+json")
+                .POST(HttpRequest.BodyPublishers.noBody())
+                .build();
+        final HttpResponse<String> response = client.send(request, HttpResponse.BodyHandlers.ofString());
+        if (response.statusCode() != 201) {
+            throw new RuntimeException("Failed to get the installation token: " + response.body());
+
+        }
+        final JsonNode jsonNode = objectMapper.readTree(response.body());
+        return jsonNode.get("token").asText();
+    }
+
+    /**
+     * Exchange the app JWT for an installation access token
+     * 
+     * @throws Exception
+     */
+    public String getInstallationId(final String owner, final String repo) throws Exception {
+        final String jwt = createJwtToken();
+
+        final HttpClient client = HttpClient.newHttpClient();
+        final HttpRequest request = HttpRequest.newBuilder()
+                .uri(URI.create("https://api.github.com/repos/" + owner + "/" + repo + "/installation"))
+                .header("Authorization", "Bearer " + jwt)
+                .header("Accept", "application/vnd.github+json")
+                .GET()
+                .build();
+        final HttpResponse<String> response = client.send(request, HttpResponse.BodyHandlers.ofString());
+        if (response.statusCode() != 200) {
+            throw new RuntimeException("Failed to get the installation ID: " + response.body());
+
+        }
+        final JsonNode jsonNode = objectMapper.readTree(response.body());
+        return jsonNode.get("id").asText();
+    }
+
+    public String getInstallationToken(final long installationId) throws Exception {
+        final String jwt = createJwtToken();
+
+        final HttpClient client = HttpClient.newHttpClient();
+
+        final HttpRequest request = HttpRequest.newBuilder()
+                .uri(URI.create("https://api.github.com/app/installations/" + installationId + "/access_tokens"))
+                .header("Authorization", "Bearer " + jwt)
+                .header("Accept", "application/vnd.github+json")
+                .POST(HttpRequest.BodyPublishers.noBody())
+                .build();
+
+        final HttpResponse<String> response = client.send(request, HttpResponse.BodyHandlers.ofString());
+
+        if (response.statusCode() != 201) {
+            throw new RuntimeException("Failed to get installation token: " + response.body());
+        }
+
+        final JsonNode jsonNode = objectMapper.readTree(response.body());
+        return jsonNode.get("token").asText();
     }
 
 }

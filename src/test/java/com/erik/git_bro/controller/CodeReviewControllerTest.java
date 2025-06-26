@@ -15,7 +15,9 @@ import org.springframework.mock.web.MockMultipartFile;
 
 import com.erik.git_bro.model.ErrorResponse;
 import com.erik.git_bro.service.CodeAnalysisService;
+import com.erik.git_bro.service.ParsingService;
 import com.erik.git_bro.service.github.GitHubAppService;
+import com.erik.git_bro.service.github.GitHubAppTokenService;
 import com.erik.git_bro.service.github.GitHubCommentService;
 
 class CodeReviewControllerTest {
@@ -24,13 +26,16 @@ class CodeReviewControllerTest {
     private CodeAnalysisService codeAnalysisService;
     private GitHubAppService gitHubAppService;
     private GitHubCommentService gitHubCommentService;
-
+    private GitHubAppTokenService gitHubAppTokenService;
+    private ParsingService parsingService;
     @BeforeEach
     void setUp() {
         codeAnalysisService = Mockito.mock(CodeAnalysisService.class);
         gitHubAppService = Mockito.mock(GitHubAppService.class);
         gitHubCommentService = Mockito.mock(GitHubCommentService.class);
-        controller = new CodeReviewController(codeAnalysisService, gitHubAppService, gitHubCommentService);
+        gitHubAppTokenService = Mockito.mock(GitHubAppTokenService.class);
+        parsingService = Mockito.mock(ParsingService.class);
+        controller = new CodeReviewController(codeAnalysisService, parsingService ,gitHubAppService, gitHubCommentService, gitHubAppTokenService);
     }
 
     @Test

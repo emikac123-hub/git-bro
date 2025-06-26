@@ -22,6 +22,7 @@ import com.erik.git_bro.model.ErrorResponse;
 import com.erik.git_bro.service.CodeAnalysisService;
 import com.erik.git_bro.service.ParsingService;
 import com.erik.git_bro.service.github.GitHubAppService;
+import com.erik.git_bro.service.github.GitHubAppTokenService;
 import com.erik.git_bro.service.github.GitHubCommentService;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
@@ -47,6 +48,7 @@ public class CodeReviewController {
     private final ParsingService parsingService;
     private final GitHubAppService gitHubAppService;
     private final GitHubCommentService gitHubCommentService;
+    private final GitHubAppTokenService gitHubAppTokenService;
 
     /**
      * Analyzes the contents of a file asynchronously. Mainly used for posting a
@@ -105,9 +107,9 @@ public class CodeReviewController {
                     }
 
                     try {
-                        final String installationId = gitHubAppService.getInstallationId(owner, repo);
+                        final String installationId = gitHubAppTokenService.getInstallationId(owner, repo);
                         final String sha = gitHubAppService.getSha(owner, repo, pullNumber);
-                        final String token = gitHubAppService.getInstallationToken(Long.parseLong(installationId));
+                        final String token = gitHubAppTokenService.getInstallationToken(Long.parseLong(installationId));
                         final String cleanFeedback = ((String) feedback)
                                 .replaceAll("(?s)```json\\s*", "")
                                 .replaceAll("(?s)```", "")
@@ -126,10 +128,11 @@ public class CodeReviewController {
                                     .findFirst();
 
                             if (matchingDiff.isPresent()) {
-                                Set<Integer> validLines = this.parsingService.extractCommentableLines(matchingDiff.get().getPatch());
+                                Set<Integer> validLines = this.parsingService
+                                        .extractCommentableLines(matchingDiff.get().getPatch());
 
                                 if (validLines.contains(line)) {
-                                    gitHubCommentService.postInlineComment(
+                                    gitHubCommentService.postBlockComments(
                                             token,
                                             owner,
                                             repo,
@@ -145,9 +148,23 @@ public class CodeReviewController {
                                 log.warn("No diff found for file: {}", file);
                             }
                         }
+                        StringBuilder markdownSummary = new StringBuilder();
+                        markdownSummary.append("### 🤖 AI Review Summary\n");
+                        markdownSummary.append("Posted ").append(inlineResponse.getIssues().size())
+                                .append(" inline comments.\n\n");
+
+                        for (Issue issue : inlineResponse.getIssues()) {
+                            markdownSummary
+                                    .append("- **File**: `").append(issue.getFile()).append("`\n")
+                                    .append("  - **Line**: ").append(issue.getLine()).append("\n")
+                                    .append("  - **Comment**: ").append(issue.getComment().replaceAll("\n", " ").trim())
+                                    .append("\n\n");
+                        }
+                        this.gitHubCommentService.postReviewCommentBatch(token, owner, repo, pullNumber, inlineResponse.getIssues());
 
                         return ResponseEntity.ok()
-                                .body("Posted " + inlineResponse.getIssues().size() + " inline comments.");
+                                .body(markdownSummary.toString().trim());
+
                     } catch (Exception e) {
                         log.error("Failed to parse or post inline comments", e);
                         return ResponseEntity.status(500).body("Failed to post inline comments: " + e.getMessage());
