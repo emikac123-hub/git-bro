@@ -9,6 +9,8 @@ import java.util.stream.Collectors;
 import org.springframework.stereotype.Service;
 
 import com.erik.git_bro.dto.Issue;
+import com.erik.git_bro.util.API;
+import com.erik.git_bro.util.GitHubRequestUtil;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
 import lombok.AllArgsConstructor;
@@ -37,9 +39,7 @@ public class GitHubCommentService {
             String commentBody,
             String sha) throws IOException {
 
-        String url = String.format(
-                "https://api.github.com/repos/%s/%s/pulls/%s/comments",
-                owner, repo, pullNumber);
+        String url = API.GIT_HUB_COMMENTS(owner, repo, pullNumber);
 
         // Build request body
         Map<String, Object> json = Map.of(
@@ -51,10 +51,8 @@ public class GitHubCommentService {
 
         String jsonBody = objectMapper.writeValueAsString(json);
 
-        Request request = new Request.Builder()
-                .url(url)
-                .header("Authorization", "Bearer " + githubToken)
-                .header("Accept", "application/vnd.github+json")
+        Request request = GitHubRequestUtil.withGitHubHeaders(
+                new Request.Builder().url(url), githubToken)
                 .post(RequestBody.create(jsonBody, MediaType.parse("application/json")))
                 .build();
 
@@ -92,15 +90,11 @@ public class GitHubCommentService {
                 "event", "COMMENT",
                 "comments", reviewComments);
 
-        String reviewUrl = String.format(
-                "https://api.github.com/repos/%s/%s/pulls/%d/reviews", owner, repo, pullNumber);
-
-        Request request = new Request.Builder()
-                .url(reviewUrl)
-                .header("Authorization", "Bearer " + githubToken)
-                .header("Accept", "application/vnd.github+json")
-                .post(RequestBody.create(objectMapper.writeValueAsString(reviewBody),
-                        MediaType.parse("application/json")))
+        String reviewUrl = API.GIT_HUB_REVIEWS(owner, repo, pullNumber);
+        
+        Request request = GitHubRequestUtil.withGitHubHeaders(
+                new Request.Builder().url(reviewUrl), githubToken)
+                .post(RequestBody.create(objectMapper.writeValueAsString(reviewBody), MediaType.parse("application/json")))
                 .build();
 
         try (Response response = okClient.newCall(request).execute()) {

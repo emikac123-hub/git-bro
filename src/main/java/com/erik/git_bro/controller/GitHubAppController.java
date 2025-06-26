@@ -10,6 +10,7 @@ import org.springframework.web.bind.annotation.RestController;
 
 import com.erik.git_bro.dto.GitDiff;
 import com.erik.git_bro.service.github.GitHubAppService;
+import com.erik.git_bro.service.github.GitHubAppTokenService;
 
 import lombok.RequiredArgsConstructor;
 
@@ -18,11 +19,12 @@ import lombok.RequiredArgsConstructor;
 @RequiredArgsConstructor
 public class GitHubAppController {
     private final GitHubAppService gitHubAppService;
+    private final GitHubAppTokenService gitHubAppTokenService;
 
     @GetMapping("/token")
     public ResponseEntity<String> getInstallationToken() throws Exception {
         try {
-            String token = gitHubAppService.getInstallationToken();
+            String token = gitHubAppTokenService.getInstallationToken();
             return ResponseEntity.ok(token);
         } catch (IOException | InterruptedException e) {
             return ResponseEntity.status(500).body("Failed to get installation token: " + e.getMessage());

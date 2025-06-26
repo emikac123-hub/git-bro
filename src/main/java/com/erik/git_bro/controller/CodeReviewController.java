@@ -22,6 +22,7 @@ import com.erik.git_bro.model.ErrorResponse;
 import com.erik.git_bro.service.CodeAnalysisService;
 import com.erik.git_bro.service.ParsingService;
 import com.erik.git_bro.service.github.GitHubAppService;
+import com.erik.git_bro.service.github.GitHubAppTokenService;
 import com.erik.git_bro.service.github.GitHubCommentService;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
@@ -47,6 +48,7 @@ public class CodeReviewController {
     private final ParsingService parsingService;
     private final GitHubAppService gitHubAppService;
     private final GitHubCommentService gitHubCommentService;
+    private final GitHubAppTokenService gitHubAppTokenService;
 
     /**
      * Analyzes the contents of a file asynchronously. Mainly used for posting a
@@ -105,9 +107,9 @@ public class CodeReviewController {
                     }
 
                     try {
-                        final String installationId = gitHubAppService.getInstallationId(owner, repo);
+                        final String installationId = gitHubAppTokenService.getInstallationId(owner, repo);
                         final String sha = gitHubAppService.getSha(owner, repo, pullNumber);
-                        final String token = gitHubAppService.getInstallationToken(Long.parseLong(installationId));
+                        final String token = gitHubAppTokenService.getInstallationToken(Long.parseLong(installationId));
                         final String cleanFeedback = ((String) feedback)
                                 .replaceAll("(?s)```json\\s*", "")
                                 .replaceAll("(?s)```", "")
