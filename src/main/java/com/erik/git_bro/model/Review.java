@@ -54,12 +54,12 @@ public class Review {
 
     /** Original diff content of the code changes. */
     @Lob
-    @Column(name = "diff_content", columnDefinition = "CLOB")
+    @Column(name = "diff_content", columnDefinition = "TEXT")
     private String diffContent;
 
     /** AI-generated feedback. */
     @Lob
-    @Column(name = "feedback", columnDefinition = "CLOB")
+    @Column(name = "feedback", columnDefinition = "TEXT")
     private String feedback;
 
     /** AI model used for analysis (e.g., chatgpt, claude, codebert). */

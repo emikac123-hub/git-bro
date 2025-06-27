@@ -100,13 +100,10 @@ to start the server. Then, copy and paste it into the work flow step "Call Code 
        API_URL: https://1102-149-154-20-92.ngrok-free.app/api/review/analyze-file
 ```
 
+## DATABASE
+For local developlment, I'm using a non-ephemeral Postgres database. Orignially, I was using H2, but needed something that would last longer.
+Below is the command to start the database. Make sure you have Docker installed.
 
-## MVP Feature Set
-
-Feature           |
------------------------------------------------
-
-JavaDoc on PR     |
-Drag-and-Drop Zip |
-Inline Comments   |
-Overall Comment   |
+```yaml
+docker compose -f docker-compose-test-db.yml up -d
+```

@@ -60,7 +60,6 @@ public class GitHubCommentService {
             if (!response.isSuccessful()) {
                 throw new IOException("GitHub comment failed: " + response.code() + " " + response.body().string());
             }
-
             log.info("Successfully posted PR inline comment on {} line {}", filePath, lineNumber);
 
         }
