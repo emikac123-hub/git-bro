@@ -12,12 +12,12 @@ spring:
     username: postgres
     password: pass
   jpa:
-    hibernate:
-      ddl-auto: update
     show-sql: true
-  h2:
-    console:
-      enabled: true
+    properties:
+      hibernate:
+        format_sql: true
+        dialect: org.hibernate.dialect.PostgreSQLDialect
+        use_sql_comments: true
   config:
     import: "optional:classpath:application-secrets.yaml"
   application:
