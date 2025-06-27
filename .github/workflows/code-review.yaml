@@ -41,7 +41,10 @@ jobs:
             -F "file=@pr.diff;type=text/plain" \
             -F "owner=${{ github.repository_owner }}" \
             -F "repo=${{ github.event.repository.name }}" \
-            -F "pullNumber=${{ github.event.pull_request.number }}" )
+            -F "pullNumber=${{ github.event.pull_request.number }}" \
+            -F "prUrl=${{ github.event.pull_request.html_url }}" \
+            -F "prAuthor=${{ github.event.pull_request.user.login }}" 
+            )
 
           echo "Raw response: $response"
 

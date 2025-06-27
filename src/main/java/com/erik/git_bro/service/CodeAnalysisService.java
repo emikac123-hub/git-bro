@@ -10,7 +10,6 @@ import org.springframework.stereotype.Service;
 
 import com.erik.git_bro.ai.CodeAnalyzer;
 import com.erik.git_bro.model.Review;
-import com.erik.git_bro.service.ParsingService;
 import com.erik.git_bro.repository.AiModelRepository;
 import com.erik.git_bro.repository.ReviewRepository;
 
@@ -130,7 +129,7 @@ public class CodeAnalysisService {
      * @return a {@link CompletableFuture} that completes with the AI-generated
      *         feedback string
      */
-    public CompletableFuture<?> analyzeFileLineByLine(String filename, String diffContent) {
+    public CompletableFuture<?> analyzeFileLineByLine(String filename, String diffContent, String owner, String repo, int pullNumber, String url, String author) {
         return analyzer.analyzeFileLineByLine(filename, diffContent)
                 .thenApply(feedback -> {
                     // Sanitize feedback before inserting into DB.
@@ -138,10 +137,11 @@ public class CodeAnalysisService {
                     final var review = Review.builder()
                             .createdAt(Instant.now())
                             .fileName(filename)
-                            .prUrl(null)
-                            .pullRequestId(null)
+                            .prUrl(url)
+                            .pullRequestId(String.valueOf(pullNumber))
                             .issueFlag(null)
                             .diffContent(diffContent)
+                            .userId(author)
                             // .aiModel(review.setAiModel(aiModelRepository.findById(aiModelId).orElseThrow(()
                             // -> log.err));)
                             .feedback((String) feedbackCast)
