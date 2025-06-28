@@ -102,8 +102,6 @@ public class CodeReviewController {
 
             String markdownSummary = buildReviewSummary(postedIssues, inlineReviewResponse.getRecommendation());
 
-            this.gitHubCommentService.postReviewCommentBatch(token, owner, repo, pullNumber, postedIssues);
-
             return ResponseEntity.ok().body(markdownSummary.toString().trim());
 
         } catch (Exception e) {

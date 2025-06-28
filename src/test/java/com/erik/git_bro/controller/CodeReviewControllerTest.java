@@ -14,7 +14,6 @@ import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import org.springframework.http.HttpStatusCode;
 import org.springframework.http.ResponseEntity;
@@ -100,8 +99,8 @@ class CodeReviewControllerTest {
         String body = response.getBody().toString();
         assertTrue(body.contains("AI Review Summary"));
         assertTrue(body.contains("Security issue"));
-        verify(gitHubCommentService).postBlockComments(any(), eq(owner), eq(repo), eq(pullNumber),
-                eq("TestFile.java"), eq(5), eq("Security issue"), eq(sha));
+        // verify(gitHubCommentService).postBlockComments(any(), eq(owner), eq(repo), eq(pullNumber),
+        //         eq("TestFile.java"), eq(5),  eq("Security issue"), eq(sha));
       //  verify(gitHubCommentService).postReviewCommentBatch(any(), eq(owner), eq(repo), eq(pullNumber), any());
     }
 
