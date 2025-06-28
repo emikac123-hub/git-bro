@@ -1,181 +1,149 @@
 package com.erik.git_bro.service;
 
 import java.math.BigDecimal;
+import java.nio.charset.StandardCharsets;
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
 import java.time.Instant;
+import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 
-import org.springframework.beans.factory.annotation.Qualifier;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
-import com.erik.git_bro.ai.CodeAnalyzer;
+import com.erik.git_bro.client.ChatGPTClient;
+import com.erik.git_bro.client.GeminiClient;
+import com.erik.git_bro.dto.AnalysisRequest;
+import com.erik.git_bro.model.Category;
 import com.erik.git_bro.model.Review;
-import com.erik.git_bro.repository.AiModelRepository;
+import com.erik.git_bro.model.ReviewIteration;
 import com.erik.git_bro.repository.ReviewRepository;
 
+import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 
-/**
- * Service responsible for analyzing code diffs using an AI-based code analyzer,
- * persisting the analysis results as {@link Review} entities, and optionally
- * writing feedback to a file.
- * <p>
- * This service asynchronously processes code diffs by sending them to an AI
- * analyzer,
- * then saves the feedback along with relevant metadata (file path, diff
- * content, timestamp)
- * into the database. It also provides functionality to persist feedback logs to
- * a
- * configured file path.
- * </p>
- * <p>
- * The {@link #analyzeFile(String, String)} method returns a
- * {@link CompletableFuture}
- * that completes with the AI feedback once analysis and persistence are done.
- * </p>
- */
 @Service
 @Slf4j
+@RequiredArgsConstructor
 public class CodeAnalysisService {
 
-    /**
-     * File system path to which feedback logs are written asynchronously.
-     * Configured via property 'app.feedback.file-path'.
-     */
-    @Value("${app.feedback.file-path}")
-    private String feedbackFilePath;
+    private final ChatGPTClient chatGPTClient;
+    private final GeminiClient geminiClient;
 
-    /**
-     * AI-based code analyzer component used to generate feedback for code diffs.
-     */
-    private final CodeAnalyzer analyzer;
-
-    /**
-     * Repository for persisting {@link Review} entities containing code analysis
-     * results.
-     */
     private final ReviewRepository reviewRepository;
-
+    private final ReviewIterationService reviewIterationService;
     private final ParsingService parsingService;
 
-    private final AiModelRepository aiModelRepository;
+    @Transactional
+    public CompletableFuture<?> analyzeDiff(AnalysisRequest request, String modelName) {
 
-    /**
-     * Constructs a new {@code CodeAnalysisService} with injected dependencies.
-     *
-     * @param analyzer          the AI code analyzer to use for generating feedback
-     * @param parsingService    service to extract metadata from code diffs
-     * @param reviewRepository  repository to persist review entities
-     * @param aiModelRepository repository to persist review entities
-     */
-    public CodeAnalysisService(@Qualifier("codeAnalyzer") CodeAnalyzer analyzer,
-            final ParsingService parsingService,
-            final ReviewRepository reviewRepository,
-            final AiModelRepository aiModeRepository) {
-        this.analyzer = analyzer;
-        this.reviewRepository = reviewRepository;
-        this.parsingService = parsingService;
-        this.aiModelRepository = aiModeRepository;
+        // Find or create the iteration for this commit
+        ReviewIteration iteration = reviewIterationService.findOrCreateIteration(request.pullRequestId(),
+                request.sha());
 
-    }
+        CompletableFuture<?> feedbackFuture;
+        if ("chatgpt".equalsIgnoreCase(modelName)) {
+            feedbackFuture = chatGPTClient.analyzeFileLineByLine(request.filename(), request.diffContent());
+        } else if ("gemini".equalsIgnoreCase(modelName)) {
+            feedbackFuture = geminiClient.analyzeFileLineByLine(request.filename(), request.diffContent());
+        } else {
+            CompletableFuture<Review> future = new CompletableFuture<>();
+            future.completeExceptionally(new IllegalArgumentException("Unsupported AI model: " + modelName));
+            return future;
+        }
 
-    /**
-     * Analyzes a given code diff asynchronously by sending it to the AI code
-     * analyzer.
-     * Once the analysis completes, a {@link Review} entity is created and saved
-     * containing
-     * the analysis feedback, diff content, extracted file path, and creation
-     * timestamp.
-     *
-     * @param filename    the name of the file being analyzed (used for context)
-     * @param diffContent the unified diff text representing code changes
-     * @return a {@link CompletableFuture} that completes with the AI-generated
-     *         feedback string
-     */
-    public CompletableFuture<?> analyzeFile(String filename, String diffContent) {
-        return analyzer.analyzeFile(filename, diffContent)
-                .thenApply(feedback -> {
-                    // Sanitize feedback before inserting into DB.
-                    final var feedbackCast = (String) this.parsingService.cleanChunk((String) feedback);
-                    final var review = Review.builder()
-                            .createdAt(Instant.now())
-                            .fileName(filename)
-                            .prUrl(null)
-                            .pullRequestId(null)
-                            .issueFlag(null)
-                            .diffContent(diffContent)
-                            // .aiModel(review.setAiModel(aiModelRepository.findById(aiModelId).orElseThrow(()
-                            // -> log.err));)
-                            .feedback((String) feedbackCast)
-                            .severityScore((BigDecimal) this.determineSeverity(feedbackCast))
-                            .build();
+        return feedbackFuture
+                .thenApplyAsync(feedback -> {
+                    String feedbackCast = parsingService.cleanChunk((String) feedback);
 
-                    reviewRepository.save(review);
-                    log.info("database insertion complete");
-                    return feedback;
+                    Category issueCategory = getIssueCategory(feedbackCast);
+                    BigDecimal severity = determineSeverity(issueCategory);
+                    Integer lineNumber = parsingService.extractLineNumberFromFeedback(feedbackCast);
+
+                    log.info("Line Number Found... {}", lineNumber);
+                    if (lineNumber == null) {
+                        // Fallback: if AI doesn't provide a line number, try to find a commentable line in the diff
+                        final Set<Integer> commentableLines = parsingService.extractCommentableLines((String) request.diffContent());
+                        if (!commentableLines.isEmpty()) {
+                            lineNumber = commentableLines.iterator().next(); // Get the first commentable line
+                        } else {
+                            lineNumber = 1; // Default to line 1 if no commentable lines are found
+                        }
+                    }
+
+                    String fingerprint = createFingerprint(
+                            request.pullRequestId(), request.filename(), request.diffContent(), issueCategory.name());
+
+                    Review review = null;
+                    // Check if this exact feedback already exists for this PR
+                    if (!reviewRepository.existsByPullRequestIdAndFeedbackFingerprint(request.pullRequestId(),
+                            fingerprint)) {
+                        review = Review.builder()
+                                .pullRequestId(request.pullRequestId())
+                                .fileName(request.filename())
+                                .diffContent(request.diffContent())
+                                .feedback(feedbackCast)
+                                .category(issueCategory)
+                                .feedbackFingerprint(fingerprint)
+                                .derivedSeverityScore(severity)
+                                .userId(request.author())
+                                .prUrl(request.prUrl())
+                                .createdAt(Instant.now())
+                                .line(lineNumber)
+                                .build();
+
+                        iteration.addReview(review);
+                        reviewRepository.save(review);
+                        log.info("New unique feedback found and saved for file: {}", request.filename());
+                    } else {
+                        log.info("Duplicate feedback detected and skipped for file: {}", request.filename());
+                    }
+                    return review; // Return the Review object
                 });
     }
 
-    /**
-     * Analyzes a given code diff asynchronously by sending it to the AI code
-     * analyzer.
-     * Once the analysis completes, a {@link Review} entity is created and saved
-     * containing
-     * the analysis feedback, diff content, extracted file path, and creation
-     * timestamp.
-     *
-     * @param filename    the name of the file being analyzed (used for context)
-     * @param diffContent the unified diff text representing code changes
-     * @return a {@link CompletableFuture} that completes with the AI-generated
-     *         feedback string
-     */
-    public CompletableFuture<?> analyzeFileLineByLine(String filename, String diffContent, String owner, String repo, int pullNumber, String url, String author) {
-        return analyzer.analyzeFileLineByLine(filename, diffContent)
-                .thenApply(feedback -> {
-                    // Sanitize feedback before inserting into DB.
-                    final var feedbackCast = (String) this.parsingService.cleanChunk((String) feedback);
-                    final var review = Review.builder()
-                            .createdAt(Instant.now())
-                            .fileName(filename)
-                            .prUrl(url)
-                            .pullRequestId(String.valueOf(pullNumber))
-                            .issueFlag(null)
-                            .diffContent(diffContent)
-                            .userId(author)
-                            // .aiModel(review.setAiModel(aiModelRepository.findById(aiModelId).orElseThrow(()
-                            // -> log.err));)
-                            .feedback((String) feedbackCast)
-                            .severityScore((BigDecimal) this.determineSeverity(feedbackCast))
-                            .build();
-                    reviewRepository.save(review);
-                    log.info("database insertion complete");
-                    return feedback;
-                });
+    private String createFingerprint(String pullRequestId, String filename, String diffContent, String issueCategory) {
+        try {
+            String sourceString = pullRequestId + ":" + filename + ":" + diffContent + ":" + issueCategory;
+            MessageDigest digest = MessageDigest.getInstance("SHA-256");
+            byte[] hash = digest.digest(sourceString.getBytes(StandardCharsets.UTF_8));
+            StringBuilder hexString = new StringBuilder();
+            for (byte b : hash) {
+                String hex = Integer.toHexString(0xff & b);
+                if (hex.length() == 1)
+                    hexString.append('0');
+                hexString.append(hex);
+            }
+            return hexString.toString();
+        } catch (NoSuchAlgorithmException e) {
+            log.error("Could not create SHA-256 fingerprint", e);
+            // Fallback to a simple concatenation if SHA-256 is not available
+            return pullRequestId + filename + diffContent;
+        }
     }
 
-    /**
-     * A severity score to measure the issues found in the PR.
-     * Eventually, this will be displayed on a dashbaord on the UI.
-     * 
-     * @param feedback - AI Generated Feedback
-     * @return
-     */
-    private BigDecimal determineSeverity(String feedback) {
+    private Category getIssueCategory(String feedback) {
         if (feedback == null || feedback.isBlank()) {
-            log.warn("The feedback is null, this could indicate a problem!");
-            return BigDecimal.valueOf(0.1); // lowest severity if feedback is blank
+            return Category.NO_FEEDBACK;
         }
-
         feedback = feedback.toLowerCase();
-
         if (feedback.contains("null pointer") || feedback.contains("security")) {
-            return BigDecimal.valueOf(0.9);
+            return Category.SECURITY;
         } else if (feedback.contains("performance") || feedback.contains("race condition")) {
-            return BigDecimal.valueOf(0.7);
+            return Category.PERFORMANCE;
         } else if (feedback.contains("naming") || feedback.contains("style")) {
-            return BigDecimal.valueOf(0.3);
+            return Category.STYLE;
         }
+        return Category.GENERAL;
+    }
 
-        return BigDecimal.valueOf(0.2); // default medium severity
+    private BigDecimal determineSeverity(Category category) {
+        return switch (category) {
+            case SECURITY -> BigDecimal.valueOf(0.9);
+            case PERFORMANCE -> BigDecimal.valueOf(0.7);
+            case STYLE -> BigDecimal.valueOf(0.3);
+            case GENERAL -> BigDecimal.valueOf(0.2);
+            case NO_FEEDBACK -> BigDecimal.valueOf(0.1);
+        };
     }
 }

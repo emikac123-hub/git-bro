@@ -24,6 +24,7 @@ public class AiProviderProperties {
      * The name or identifier of the AI provider to be used.
      */
     private String aiProvider;
+    private String gemini;
 
     /**
      * Returns the AI provider configured for the application.

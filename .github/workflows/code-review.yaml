@@ -33,7 +33,7 @@ jobs:
       - name: Call Code Review API (analyze-file-by-line)
         id: call-api
         env:
-          API_URL: https://1ea5-149-154-20-92.ngrok-free.app/api/review/analyze-file-by-line
+          API_URL: https://7caa-149-154-20-92.ngrok-free.app/api/review/analyze-file-by-line
         run: |
           echo "Sending PR diff as file to $API_URL"
 
@@ -43,7 +43,8 @@ jobs:
             -F "repo=${{ github.event.repository.name }}" \
             -F "pullNumber=${{ github.event.pull_request.number }}" \
             -F "prUrl=${{ github.event.pull_request.html_url }}" \
-            -F "prAuthor=${{ github.event.pull_request.user.login }}" 
+            -F "prAuthor=${{ github.event.pull_request.user.login }}" \
+            -F "modelName=chatgpt" 
             )
 
           echo "Raw response: $response"
@@ -75,10 +76,10 @@ jobs:
               issue_number: context.issue.number,
               body: feedback
             });
-      - name: Run GitBro JavaDoc Generator
-        run: |
-          curl -X POST  https://1ea5-149-154-20-92.ngrok-free.app/api/javadoc-generator \
-              -F "owner=${{ github.repository_owner }}" \
-              -F "repo=${{ github.event.repository.name }}" \
-              -F "pullNumber=${{ github.event.pull_request.number }}" \
-              -F "file=@pr.diff"
+      # - name: Run GitBro JavaDoc Generator
+      #   run: |
+      #     curl -X POST  https://1ea5-149-154-20-92.ngrok-free.app/api/javadoc-generator \
+      #         -F "owner=${{ github.repository_owner }}" \
+      #         -F "repo=${{ github.event.repository.name }}" \
+      #         -F "pullNumber=${{ github.event.pull_request.number }}" \
+      #         -F "file=@pr.diff"

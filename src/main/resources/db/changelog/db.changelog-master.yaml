@@ -1,7 +1,68 @@
 databaseChangeLog:
   - changeSet:
-      id: 1
+      id: enable-pgcrypto
       author: erikmikac
+      changes:
+        - sql:
+            splitStatements: false
+            stripComments: true
+            sql: CREATE EXTENSION IF NOT EXISTS "pgcrypto";
+
+  - changeSet:
+      id: create-review-iteration-table
+      author: erikmikac
+      preConditions:
+        - onFail: MARK_RAN
+        - not:
+            tableExists:
+              tableName: review_iteration
+      changes:
+        - createTable:
+            tableName: review_iteration
+            columns:
+              - column:
+                  name: id
+                  type: UUID
+                  defaultValueComputed: gen_random_uuid()
+                  constraints:
+                    primaryKey: true
+                    nullable: false
+              - column:
+                  name: pull_request_id
+                  type: VARCHAR(255)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: commit_sha
+                  type: VARCHAR(255)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: push_at
+                  type: TIMESTAMP WITH TIME ZONE
+                  constraints:
+                    nullable: false
+              - column:
+                  name: ai_model
+                  type: VARCHAR(255)
+              - column:
+                  name: ai_temperature
+                  type: NUMERIC(3,2)
+              - column:
+                  name: comment_summary
+                  type: TEXT
+              - column:
+                  name: severity_score
+                  type: VARCHAR(255)
+
+  - changeSet:
+      id: create-review
+      author: erikmikac
+      preConditions:
+        - onFail: MARK_RAN
+        - not:
+            tableExists:
+              tableName: review
       changes:
         - createTable:
             tableName: review
@@ -9,6 +70,7 @@ databaseChangeLog:
               - column:
                   name: id
                   type: UUID
+                  defaultValueComputed: gen_random_uuid()
                   constraints:
                     primaryKey: true
                     nullable: false
@@ -17,16 +79,22 @@ databaseChangeLog:
                   type: TIMESTAMP
                   defaultValueComputed: CURRENT_TIMESTAMP
               - column:
+                  name: pull_request_id
+                  type: VARCHAR(255)
+                  constraints:
+                    nullable: false
+              - column:
                   name: file_name
                   type: VARCHAR(512)
               - column:
                   name: diff_content
                   type: TEXT
+                  
               - column:
                   name: feedback
                   type: TEXT
               - column:
-                  name: model_used
+                  name: ai_model
                   type: VARCHAR(100)
               - column:
                   name: user_id
@@ -39,5 +107,36 @@ databaseChangeLog:
                   type: BOOLEAN
                   defaultValueBoolean: false
               - column:
-                  name: severity_score
+                  name: derived_severity_score
                   type: DECIMAL(3,2)
+              - column:
+                  name: category
+                  type: VARCHAR(100)
+              - column:
+                  name: feedback_fingerprint
+                  type: VARCHAR(256)
+              - column:
+                  name: line
+                  type: INTEGER
+              - column:
+                  name: review_iteration_id
+                  type: UUID
+                  constraints:
+                    nullable: true  # Allow null initially
+
+  - changeSet:
+      id: add-fk-review-to-review-iteration
+      author: erikmikac
+      preConditions:
+        - onFail: MARK_RAN
+        - tableExists:
+            tableName: review
+        - tableExists:
+            tableName: review_iteration
+      changes:
+        - addForeignKeyConstraint:
+            baseTableName: review
+            baseColumnNames: review_iteration_id
+            constraintName: fk_review_review_iteration
+            referencedTableName: review_iteration
+            referencedColumnNames: id

@@ -33,6 +33,9 @@ huggingface:
 openai:
   api:
     token: ${OPENAI_API_TOKEN}
+gemini:
+  api:
+    key: ${GEMINI_API_KEY}
 app:
   ai-provider: chatgpt
   feedback:
