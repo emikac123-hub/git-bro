@@ -19,7 +19,9 @@ import jakarta.persistence.UniqueConstraint;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
+import lombok.EqualsAndHashCode;
 import lombok.NoArgsConstructor;
+import lombok.ToString;
 
 @Data
 @Entity
@@ -45,6 +47,8 @@ public class Review {
     @Column(columnDefinition = "TEXT")
     private String feedback;
 
+    private Integer line;
+
     @Column(nullable = false)
     private String pullRequestId;
 
@@ -69,5 +73,7 @@ public class Review {
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "review_iteration_id")
+    @ToString.Exclude
+    @EqualsAndHashCode.Exclude
     private ReviewIteration reviewIteration;
 }

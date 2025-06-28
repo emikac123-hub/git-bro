@@ -79,6 +79,11 @@ databaseChangeLog:
                   type: TIMESTAMP
                   defaultValueComputed: CURRENT_TIMESTAMP
               - column:
+                  name: pull_request_id
+                  type: VARCHAR(255)
+                  constraints:
+                    nullable: false
+              - column:
                   name: file_name
                   type: VARCHAR(512)
               - column:

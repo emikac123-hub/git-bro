@@ -18,14 +18,13 @@ import org.springframework.web.multipart.MultipartFile;
 import com.erik.git_bro.dto.AnalysisRequest;
 import com.erik.git_bro.dto.ErrorResponse;
 import com.erik.git_bro.dto.GitDiff;
-import com.erik.git_bro.dto.InlineReviewResponse;
 import com.erik.git_bro.dto.Issue;
+import com.erik.git_bro.model.Review;
 import com.erik.git_bro.service.CodeAnalysisService;
 import com.erik.git_bro.service.ParsingService;
 import com.erik.git_bro.service.github.GitHubAppService;
 import com.erik.git_bro.service.github.GitHubAppTokenService;
 import com.erik.git_bro.service.github.GitHubCommentService;
-import com.fasterxml.jackson.databind.ObjectMapper;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -43,8 +42,6 @@ import lombok.extern.slf4j.Slf4j;
 @Slf4j
 @RequiredArgsConstructor
 public class CodeReviewController {
-
-    private final ObjectMapper objectMapper = new ObjectMapper();
     private final CodeAnalysisService codeAnalysisService;
     private final ParsingService parsingService;
     private final GitHubAppService gitHubAppService;
@@ -73,22 +70,26 @@ public class CodeReviewController {
             );
 
             return this.codeAnalysisService.analyzeDiff(request, modelName)
-                .handle((feedback, throwable) -> {
+                .handle((review, throwable) -> {
                     if (throwable != null) {
-                        return this.showResponse((String) feedback, throwable, "Failure to analyze code by line.");
+                        return this.showResponse((String) null, throwable, "Failure to analyze code by line.");
+                    }
+
+                    if (review == null) {
+                        return ResponseEntity.ok().body("No new feedback generated or duplicate feedback skipped.");
                     }
 
                     try {
+                        final var reviewCast = (Review) review;
                         final String installationId = gitHubAppTokenService.getInstallationId(owner, repo);
                         final String token = gitHubAppTokenService.getInstallationToken(Long.parseLong(installationId));
-                        final String cleanFeedback = ((String) feedback)
-                                .replaceAll("(?s)```json\\s*", "")
-                                .replaceAll("(?s)```", "")
-                                .trim();
+                        
+                        // Create a list of issues from the single review object
+                        List<Issue> issues = List.of(new Issue(reviewCast.getFileName(), reviewCast.getLine(), reviewCast.getFeedback()));
+
                         final List<GitDiff> diffsFromPr = this.gitHubAppService.getDiffs(owner, repo, pullNumber);
-                        InlineReviewResponse inlineResponse = objectMapper.readValue(cleanFeedback,
-                                InlineReviewResponse.class);
-                        for (Issue issue : inlineResponse.getIssues()) {
+                        
+                        for (Issue issue : issues) {
                             String issueFile = issue.getFile();
                             int line = issue.getLine();
                             String comment = issue.getComment();
@@ -113,25 +114,25 @@ public class CodeReviewController {
                                             comment,
                                             sha);
                                 } else {
-                                    log.warn("Skipping comment: line {} in {} is not part of diff.", line, file);
+                                    log.warn("Skipping comment: line {} in {} is not part of diff.", line, issueFile);
                                 }
                             } else {
-                                log.warn("No diff found for file: {}", file);
+                                log.warn("No diff found for file: {}", issueFile);
                             }
                         }
                         StringBuilder markdownSummary = new StringBuilder();
                         markdownSummary.append("### 🤖 AI Review Summary\n");
-                        markdownSummary.append("Posted ").append(inlineResponse.getIssues().size())
+                        markdownSummary.append("Posted ").append(issues.size())
                                 .append(" inline comments.\n\n");
 
-                        for (Issue issue : inlineResponse.getIssues()) {
+                        for (Issue issue : issues) {
                             markdownSummary
                                     .append("- **File**: `").append(issue.getFile()).append("`\n")
                                     .append("  - **Line**: ").append(issue.getLine()).append("\n")
                                     .append("  - **Comment**: ").append(issue.getComment().replaceAll("\n", " ").trim())
                                     .append("\n\n");
                         }
-                        this.gitHubCommentService.postReviewCommentBatch(token, owner, repo, pullNumber, inlineResponse.getIssues());
+                        this.gitHubCommentService.postReviewCommentBatch(token, owner, repo, pullNumber, issues);
 
                         return ResponseEntity.ok()
                                 .body(markdownSummary.toString().trim());

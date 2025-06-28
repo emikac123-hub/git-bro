@@ -26,19 +26,19 @@ import lombok.extern.slf4j.Slf4j;
 @RequiredArgsConstructor
 public class CodeAnalysisService {
 
-
     private final ChatGPTClient chatGPTClient;
     private final GeminiClient geminiClient;
-    
+
     private final ReviewRepository reviewRepository;
     private final ReviewIterationService reviewIterationService;
     private final ParsingService parsingService;
 
     @Transactional
-    public CompletableFuture<Object> analyzeDiff(AnalysisRequest request, String modelName) {
+    public CompletableFuture<?> analyzeDiff(AnalysisRequest request, String modelName) {
 
         // Find or create the iteration for this commit
-        ReviewIteration iteration = reviewIterationService.findOrCreateIteration(request.pullRequestId(), request.sha());
+        ReviewIteration iteration = reviewIterationService.findOrCreateIteration(request.pullRequestId(),
+                request.sha());
 
         CompletableFuture<?> feedbackFuture;
         if ("chatgpt".equalsIgnoreCase(modelName)) {
@@ -46,7 +46,9 @@ public class CodeAnalysisService {
         } else if ("gemini".equalsIgnoreCase(modelName)) {
             feedbackFuture = geminiClient.analyzeFileLineByLine(request.filename(), request.diffContent());
         } else {
-            return CompletableFuture.failedFuture(new IllegalArgumentException("Unsupported AI model: " + modelName));
+            CompletableFuture<Review> future = new CompletableFuture<>();
+            future.completeExceptionally(new IllegalArgumentException("Unsupported AI model: " + modelName));
+            return future;
         }
 
         return feedbackFuture
@@ -55,13 +57,16 @@ public class CodeAnalysisService {
 
                     Category issueCategory = getIssueCategory(feedbackCast);
                     BigDecimal severity = determineSeverity(issueCategory);
+                    Integer lineNumber = parsingService.extractLineNumberFromFeedback(feedbackCast);
 
                     String fingerprint = createFingerprint(
                             request.pullRequestId(), request.filename(), request.diffContent(), issueCategory.name());
 
+                    Review review = null;
                     // Check if this exact feedback already exists for this PR
-                    if (!reviewRepository.existsByPullRequestIdAndFeedbackFingerprint(request.pullRequestId(), fingerprint)) {
-                        Review review = Review.builder()
+                    if (!reviewRepository.existsByPullRequestIdAndFeedbackFingerprint(request.pullRequestId(),
+                            fingerprint)) {
+                        review = Review.builder()
                                 .pullRequestId(request.pullRequestId())
                                 .fileName(request.filename())
                                 .diffContent(request.diffContent())
@@ -72,6 +77,7 @@ public class CodeAnalysisService {
                                 .userId(request.author())
                                 .prUrl(request.prUrl())
                                 .createdAt(Instant.now())
+                                .line(lineNumber)
                                 .build();
 
                         iteration.addReview(review);
@@ -80,7 +86,7 @@ public class CodeAnalysisService {
                     } else {
                         log.info("Duplicate feedback detected and skipped for file: {}", request.filename());
                     }
-                    return feedback; // Return feedback for the controller
+                    return review; // Return the Review object
                 });
     }
 

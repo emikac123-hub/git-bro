@@ -15,7 +15,9 @@ import jakarta.persistence.OneToMany;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
+import lombok.EqualsAndHashCode;
 import lombok.NoArgsConstructor;
+import lombok.ToString;
 
 @Data
 @Entity
@@ -44,6 +46,8 @@ public class ReviewIteration {
     // 'mappedBy' indicates that the Review entity owns the relationship.
     @OneToMany(mappedBy = "reviewIteration", cascade = CascadeType.ALL, orphanRemoval = true)
     @Builder.Default
+    @ToString.Exclude
+    @EqualsAndHashCode.Exclude
     private List<Review> reviews = new ArrayList<>();
 
     // Helper method to add a review to the iteration

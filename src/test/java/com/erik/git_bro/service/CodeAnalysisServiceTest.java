@@ -64,11 +64,11 @@ class CodeAnalysisServiceTest {
                 .thenReturn(false);
 
         // When
-        CompletableFuture<Object> future = codeAnalysisService.analyzeDiff(request, "chatgpt");
+        CompletableFuture<?> future = codeAnalysisService.analyzeDiff(request, "chatgpt");
         Object result = future.get();
 
         // Then
-        assertEquals(rawFeedback, result, "The raw feedback should be returned to the controller.");
+        assertTrue(result instanceof Review, "A Review object should be returned.");
 
         ArgumentCaptor<Review> reviewCaptor = ArgumentCaptor.forClass(Review.class);
         verify(reviewRepository).save(reviewCaptor.capture());
@@ -109,11 +109,11 @@ class CodeAnalysisServiceTest {
                 .thenReturn(true); // Simulate that this feedback already exists
 
         // When
-        CompletableFuture<Object> future = codeAnalysisService.analyzeDiff(request, "chatgpt");
-        Object result = future.get();
+        CompletableFuture<?> future = codeAnalysisService.analyzeDiff(request, "chatgpt");
+        Review result = (Review) future.get();
 
         // Then
-        assertEquals(rawFeedback, result);
+        assertEquals(null, result);
         verify(reviewRepository, never()).save(any(Review.class));
         assertTrue(iteration.getReviews().isEmpty());
     }

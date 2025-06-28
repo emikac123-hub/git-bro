@@ -225,4 +225,13 @@ public class ParsingService {
 
         return commentableLines;
     }
+
+    public Integer extractLineNumberFromFeedback(String feedback) {
+        Pattern pattern = Pattern.compile("Line (\\d+):");
+        Matcher matcher = pattern.matcher(feedback);
+        if (matcher.find()) {
+            return Integer.parseInt(matcher.group(1));
+        }
+        return null; // Or throw an exception, depending on desired behavior
+    }
 }

@@ -2,6 +2,7 @@ package com.erik.git_bro.controller;
 
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
+import java.time.Instant;
 import java.util.List;
 import java.util.Set;
 import java.util.concurrent.CompletableFuture;
@@ -25,6 +26,8 @@ import com.erik.git_bro.dto.ErrorResponse;
 import com.erik.git_bro.dto.GitDiff;
 import com.erik.git_bro.dto.InlineReviewResponse;
 import com.erik.git_bro.dto.Issue;
+import com.erik.git_bro.model.Category;
+import com.erik.git_bro.model.Review;
 import com.erik.git_bro.service.CodeAnalysisService;
 import com.erik.git_bro.service.ParsingService;
 import com.erik.git_bro.service.github.GitHubAppService;
@@ -63,6 +66,13 @@ class CodeReviewControllerTest {
         MockMultipartFile file = new MockMultipartFile(
                 "file", "Test.java", "text/plain", diffContent.getBytes(StandardCharsets.UTF_8));
 
+        Review review = Review.builder()
+        .line(10)
+        .category(Category.GENERAL)
+        .createdAt(Instant.now())
+        .feedback("Feedback")
+        .feedbackFingerprint("102103")
+        .build();
         String owner = "erikmikac";
         String repo = "git-bro";
         int pullNumber = 1;
@@ -85,9 +95,10 @@ class CodeReviewControllerTest {
         gitDiff.setFilename("Test.java");
         gitDiff.setPatch("@@ -1,1 +1,1 @@\n+public class Test {}");
 
+
         when(gitHubAppService.getSha(owner, repo, pullNumber)).thenReturn(sha);
         when(codeAnalysisService.analyzeDiff(any(AnalysisRequest.class), eq("chatgpt")))
-                .thenReturn(CompletableFuture.completedFuture(feedbackJson));
+                .thenReturn((CompletableFuture) CompletableFuture.completedFuture(review));
         when(gitHubAppTokenService.getInstallationId(owner, repo)).thenReturn(installationId);
         when(gitHubAppTokenService.getInstallationToken(Long.parseLong(installationId))).thenReturn(token);
         when(gitHubAppService.getDiffs(owner, repo, pullNumber)).thenReturn(List.of(gitDiff));
@@ -116,9 +127,9 @@ class CodeReviewControllerTest {
 
         when(gitHubAppService.getSha(owner, repo, pullNumber)).thenReturn(sha);
 
-        CompletableFuture<Object> failedFuture = new CompletableFuture<>();
+        CompletableFuture<?> failedFuture = new CompletableFuture<>();
         failedFuture.completeExceptionally(new IllegalArgumentException("Invalid diff"));
-        when(codeAnalysisService.analyzeDiff(any(AnalysisRequest.class), anyString())).thenReturn(failedFuture);
+        when((CompletableFuture) codeAnalysisService.analyzeDiff(any(AnalysisRequest.class), anyString())).thenReturn(failedFuture);
 
         // When
         CompletableFuture<ResponseEntity<?>> responseFuture = controller.postInlineComment(file, owner, repo, pullNumber, prUrl, prAuthor, "chatgpt");
@@ -144,9 +155,9 @@ class CodeReviewControllerTest {
 
         when(gitHubAppService.getSha(owner, repo, pullNumber)).thenReturn(sha);
 
-        CompletableFuture<Object> failedFuture = new CompletableFuture<>();
+        CompletableFuture<?> failedFuture = new CompletableFuture<>();
         failedFuture.completeExceptionally(new RuntimeException("Something went wrong"));
-        when(codeAnalysisService.analyzeDiff(any(AnalysisRequest.class), anyString())).thenReturn(failedFuture);
+        when((CompletableFuture) codeAnalysisService.analyzeDiff(any(AnalysisRequest.class), anyString())).thenReturn(failedFuture);
 
         // When
         CompletableFuture<ResponseEntity<?>> responseFuture = controller.postInlineComment(file, owner, repo, pullNumber, prUrl, prAuthor, "chatgpt");
