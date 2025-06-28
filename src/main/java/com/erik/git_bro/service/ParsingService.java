@@ -233,33 +233,38 @@ public class ParsingService {
 
     public Integer calculatePositionInDiffHunk(String patch, int absoluteLineNumber) {
         String[] lines = patch.split("\n");
-        int currentAbsoluteLine = -1;
-        int position = -1;
 
-        for (int i = 0; i < lines.length; i++) {
-            String line = lines[i];
+        int newFileLine = 0; // Tracks the absolute line number in the new file
+        int positionInHunk = -1;
+        boolean inTargetHunk = false;
+
+        for (String line : lines) {
             if (line.startsWith("@@")) {
+                // Parse the hunk header to get the new file line number start
                 Matcher matcher = Pattern.compile("\\+([0-9]+)").matcher(line);
                 if (matcher.find()) {
-                    currentAbsoluteLine = Integer.parseInt(matcher.group(1));
+                    newFileLine = Integer.parseInt(matcher.group(1)) - 1; // -1 because we increment immediately
+                    positionInHunk = -1;
+                    inTargetHunk = true;
+                } else {
+                    inTargetHunk = false;
                 }
-                position = -1; // Reset position for new hunk
-            } else if (line.startsWith("+")) {
-                position++;
-                if (currentAbsoluteLine == absoluteLineNumber) {
-                    return position;
+            } else if (inTargetHunk) {
+                if (line.startsWith(" ") || line.startsWith("+")) {
+                    newFileLine++;
+                    positionInHunk++;
+
+                    if (newFileLine == absoluteLineNumber && line.startsWith("+")) {
+                        return positionInHunk;
+                    }
+                } else if (line.startsWith("-")) {
+                    // Deleted line, only increases positionInHunk
+                    positionInHunk++;
                 }
-                currentAbsoluteLine++;
-            } else if (line.startsWith(" ")) {
-                position++;
-                currentAbsoluteLine++;
-            } else if (line.startsWith("-")) {
-                // Decrement currentAbsoluteLine for removed lines, but don't increment position
-                // as they are not part of the new file
-                currentAbsoluteLine++;
             }
         }
-        return null; // Line not found in diff hunk
+
+        return null; // Line not found or not part of added lines
     }
 
     public Integer extractLineNumberFromFeedback(String feedback) {
