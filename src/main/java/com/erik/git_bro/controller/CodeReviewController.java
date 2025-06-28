@@ -19,7 +19,6 @@ import com.erik.git_bro.dto.AnalysisRequest;
 import com.erik.git_bro.dto.ErrorResponse;
 import com.erik.git_bro.dto.GitDiff;
 import com.erik.git_bro.dto.Issue;
-import com.erik.git_bro.model.Review;
 import com.erik.git_bro.service.CodeAnalysisService;
 import com.erik.git_bro.service.ParsingService;
 import com.erik.git_bro.service.github.GitHubAppService;
@@ -153,7 +152,7 @@ public class CodeReviewController {
                             }
                             markdownSummary.append("**Recommendation**: ").append(inlineReviewResponse.getRecommendation()).append("\n");
 
-                            this.gitHubCommentService.postReviewCommentBatch(token, owner, repo, pullNumber, issuesToPost);
+                        //    this.gitHubCommentService.postReviewCommentBatch(token, owner, repo, pullNumber, issuesToPost);
 
                             return ResponseEntity.ok()
                                     .body(markdownSummary.toString().trim());
