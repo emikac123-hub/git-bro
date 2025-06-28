@@ -275,7 +275,7 @@ public class ParsingService {
                 }
             }
         }
-        return 0; // target line not found in patch
+        return null; // target line not found in patch
     }
 
     public Integer extractLineNumberFromFeedback(String feedback) {
