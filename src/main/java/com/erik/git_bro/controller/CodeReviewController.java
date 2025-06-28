@@ -61,35 +61,46 @@ public class CodeReviewController {
             String sha = gitHubAppService.getSha(owner, repo, pullNumber);
 
             AnalysisRequest request = new AnalysisRequest(
-                file.getOriginalFilename(), 
-                diff, 
-                String.valueOf(pullNumber), 
-                sha, 
-                prUrl, 
-                prAuthor
-            );
+                    file.getOriginalFilename(),
+                    diff,
+                    String.valueOf(pullNumber),
+                    sha,
+                    prUrl,
+                    prAuthor);
 
             return this.codeAnalysisService.analyzeDiff(request, modelName)
-                .handle((review, throwable) -> {
-                    if (throwable != null) {
-                        return this.showResponse((String) null, throwable, "Failure to analyze code by line.");
-                    }
+                    .handle((review, throwable) -> {
+                        if (throwable != null) {
+                            return this.showResponse((String) null, throwable, "Failure to analyze code by line.");
+                        }
 
-                    if (review == null) {
-                        return ResponseEntity.ok().body("No new feedback generated or duplicate feedback skipped.");
-                    }
+                        if (review == null) {
+                            return ResponseEntity.ok().body("No new feedback generated or duplicate feedback skipped.");
+                        }
 
-                    try {
-                        final var reviewCast = (Review) review;
-                        final String installationId = gitHubAppTokenService.getInstallationId(owner, repo);
-                        final String token = gitHubAppTokenService.getInstallationToken(Long.parseLong(installationId));
-                        log.info("The Review: {}", review);
-                        // Create a list of issues from the single review object
-                        List<Issue> issues = List.of(new Issue(reviewCast.getFileName(), reviewCast.getLine(), reviewCast.getLine(), reviewCast.getFeedback()));
+                        try {
+                            final var reviewCast = (Review) review;
+                            final String installationId = gitHubAppTokenService.getInstallationId(owner, repo);
+                            final String token = gitHubAppTokenService
+                                    .getInstallationToken(Long.parseLong(installationId));
+                            log.info("The Review: {}", review);
 
-                        final List<GitDiff> diffsFromPr = this.gitHubAppService.getDiffs(owner, repo, pullNumber);
-                        
-                        for (Issue issue : issues) {
+                            // Find the matching GitDiff for the review
+                            Optional<GitDiff> matchingDiffForReview = gitHubAppService.getDiffs(owner, repo, pullNumber)
+                                    .stream()
+                                    .filter(d -> d.getFilename().equals(reviewCast.getFileName()))
+                                    .findFirst();
+
+                            Integer firstPosition = null;
+                            if (matchingDiffForReview.isPresent()) {
+                                firstPosition = parsingService.calculatePositionInDiffHunk(
+                                        matchingDiffForReview.get().getPatch(), reviewCast.getLine());
+                            }
+
+                            Issue issue = new Issue(reviewCast.getFileName(), reviewCast.getLine(),
+                                    firstPosition != null ? firstPosition : 0, reviewCast.getFeedback());
+
+                            final List<GitDiff> diffsFromPr = this.gitHubAppService.getDiffs(owner, repo, pullNumber);
                             log.info(issue.getComment());
                             String issueFile = issue.getFile();
                             int line = issue.getLine();
@@ -98,7 +109,8 @@ public class CodeReviewController {
                             // Find the matching GitDiff
                             Optional<GitDiff> matchingDiff = diffsFromPr.stream()
                                     .filter(d -> {
-                                        log.info("Comparing issueFile: {} with GitDiff filename: {}", issueFile, d.getFilename());
+                                        log.info("Comparing issueFile: {} with GitDiff filename: {}", issueFile,
+                                                d.getFilename());
                                         return d.getFilename().equals(issueFile);
                                     })
                                     .findFirst();
@@ -107,67 +119,63 @@ public class CodeReviewController {
                                 GitDiff gitDiff = matchingDiff.get();
                                 if (gitDiff.getPatch() == null || gitDiff.getPatch().isBlank()) {
                                     log.warn("Skipping comment: Diff patch is blank for file: {}", issueFile);
-                                    continue; // Skip to the next issue
-                                }
-                                Set<Integer> validLines = this.parsingService
-                                        .extractCommentableLines(gitDiff.getPatch());
-
-                                if (validLines.contains(line)) {
-                                    Integer position = this.parsingService.calculatePositionInDiffHunk(gitDiff.getPatch(), line);
-                                    if (position != null) {
-                                        gitHubCommentService.postBlockComments(
-                                                token,
-                                                owner,
-                                                repo,
-                                                pullNumber,
-                                                issueFile,
-                                                position, // Use position here
-                                                comment,
-                                                sha);
-                                    } else {
-                                        log.warn("Skipping comment: Could not calculate position for line {} in {}.", line, issueFile);
-                                    }
                                 } else {
-                                    log.warn("Skipping comment: line {} in {} is not part of diff.", line, issueFile);
+                                    Set<Integer> validLines = this.parsingService
+                                            .extractCommentableLines(gitDiff.getPatch());
+
+                                    if (validLines.contains(line)) {
+                                        Integer position = this.parsingService
+                                                .calculatePositionInDiffHunk(gitDiff.getPatch(), line);
+                                        if (position != null) {
+                                            gitHubCommentService.postBlockComments(
+                                                    token,
+                                                    owner,
+                                                    repo,
+                                                    pullNumber,
+                                                    issueFile,
+                                                    position, // Use position here
+                                                    comment,
+                                                    sha);
+                                        } else {
+                                            log.warn(
+                                                    "Skipping comment: Could not calculate position for line {} in {}.",
+                                                    line, issueFile);
+                                        }
+                                    } else {
+                                        log.warn("Skipping comment: line {} in {} is not part of diff.", line,
+                                                issueFile);
+                                    }
                                 }
                             } else {
                                 log.warn("No diff found for file: {}", issueFile);
                             }
-                        }
-                        StringBuilder markdownSummary = new StringBuilder();
-                        markdownSummary.append("### 🤖 AI Review Summary\n");
-                        markdownSummary.append("Posted ").append(issues.size())
-                                .append(" inline comments.\n\n");
 
-                        for (Issue issue : issues) {
+                            StringBuilder markdownSummary = new StringBuilder();
+                            markdownSummary.append("### 🤖 AI Review Summary\n");
+                            markdownSummary.append("Posted ").append(issues.size())
+                                    .append(" inline comments.\n\n");
+
                             markdownSummary
                                     .append("- **File**: `").append(issue.getFile()).append("`\n")
                                     .append("  - **Line**: ").append(issue.getLine()).append("\n")
                                     .append("  - **Comment**: ").append(issue.getComment().replaceAll("\n", " ").trim())
                                     .append("\n\n");
+
+                            // Populate position for batch comments (already done for single issue)
+                            this.gitHubCommentService.postReviewCommentBatch(token, owner, repo, pullNumber, issues);
+
+                            return ResponseEntity.ok()
+                                    .body(markdownSummary.toString().trim());
+
+                        } catch (Exception e) {
+                            log.error("Failed to parse or post inline comments", e);
+                            return ResponseEntity.status(500).body("Failed to post inline comments: " + e.getMessage());
                         }
-                        // Populate position for batch comments
-                        issues.forEach(issue -> {
-                            Optional<GitDiff> matchingDiff = diffsFromPr.stream()
-                                    .filter(d -> d.getFilename().equals(issue.getFile()))
-                                    .findFirst();
-                            matchingDiff.ifPresent(d -> {
-                                issue.setPosition(this.parsingService.calculatePositionInDiffHunk(d.getPatch(), issue.getLine()));
-                            });
-                        });
-                        this.gitHubCommentService.postReviewCommentBatch(token, owner, repo, pullNumber, issues);
-
-                        return ResponseEntity.ok()
-                                .body(markdownSummary.toString().trim());
-
-                    } catch (Exception e) {
-                        log.error("Failed to parse or post inline comments", e);
-                        return ResponseEntity.status(500).body("Failed to post inline comments: " + e.getMessage());
-                    }
-                });
+                    });
         } catch (Exception e) {
             log.error("Failed to get SHA or prepare analysis request", e);
-            return CompletableFuture.completedFuture(ResponseEntity.status(500).body("Failed to prepare analysis: " + e.getMessage()));
+            return CompletableFuture
+                    .completedFuture(ResponseEntity.status(500).body("Failed to prepare analysis: " + e.getMessage()));
         }
     }
 
