@@ -5,7 +5,6 @@ import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.time.Instant;
-import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 
 import org.springframework.stereotype.Service;
@@ -14,10 +13,14 @@ import org.springframework.transaction.annotation.Transactional;
 import com.erik.git_bro.client.ChatGPTClient;
 import com.erik.git_bro.client.GeminiClient;
 import com.erik.git_bro.dto.AnalysisRequest;
+import com.erik.git_bro.dto.InlineReviewResponse;
+import com.erik.git_bro.dto.Issue;
 import com.erik.git_bro.model.Category;
 import com.erik.git_bro.model.Review;
 import com.erik.git_bro.model.ReviewIteration;
 import com.erik.git_bro.repository.ReviewRepository;
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -29,76 +32,72 @@ public class CodeAnalysisService {
 
     private final ChatGPTClient chatGPTClient;
     private final GeminiClient geminiClient;
-
+    
     private final ReviewRepository reviewRepository;
     private final ReviewIterationService reviewIterationService;
     private final ParsingService parsingService;
+    private final ObjectMapper objectMapper;
 
     @Transactional
-    public CompletableFuture<?> analyzeDiff(AnalysisRequest request, String modelName) {
+    public CompletableFuture<InlineReviewResponse> analyzeDiff(AnalysisRequest request, String modelName) {
 
         // Find or create the iteration for this commit
         ReviewIteration iteration = reviewIterationService.findOrCreateIteration(request.pullRequestId(),
                 request.sha());
 
-        CompletableFuture<?> feedbackFuture;
+        CompletableFuture<String> feedbackFuture;
         if ("chatgpt".equalsIgnoreCase(modelName)) {
-            feedbackFuture = chatGPTClient.analyzeFileLineByLine(request.filename(), request.diffContent());
+             feedbackFuture = (CompletableFuture<String>) chatGPTClient.analyzeFileLineByLine(request.filename(), request.diffContent());
         } else if ("gemini".equalsIgnoreCase(modelName)) {
-            feedbackFuture = geminiClient.analyzeFileLineByLine(request.filename(), request.diffContent());
+            feedbackFuture = (CompletableFuture<String>) geminiClient.analyzeFileLineByLine(request.filename(), request.diffContent());
         } else {
-            CompletableFuture<Review> future = new CompletableFuture<>();
+            CompletableFuture<InlineReviewResponse> future = new CompletableFuture<>();
             future.completeExceptionally(new IllegalArgumentException("Unsupported AI model: " + modelName));
             return future;
         }
 
         return feedbackFuture
-                .thenApplyAsync(feedback -> {
-                    String feedbackCast = parsingService.cleanChunk((String) feedback);
+                .thenApplyAsync(rawFeedback -> {
+                    try {
+                        String cleanFeedback = parsingService.cleanChunk(rawFeedback);
+                        InlineReviewResponse inlineReviewResponse = objectMapper.readValue(cleanFeedback, InlineReviewResponse.class);
 
-                    Category issueCategory = getIssueCategory(feedbackCast);
-                    BigDecimal severity = determineSeverity(issueCategory);
-                    Integer lineNumber = parsingService.extractLineNumberFromFeedback(feedbackCast);
+                        for (Issue aiIssue : inlineReviewResponse.getIssues()) {
+                            Category issueCategory = getIssueCategory(aiIssue.getComment());
+                            BigDecimal severity = determineSeverity(issueCategory);
+                            Integer lineNumber = aiIssue.getLine(); // AI should provide line number
 
-                    log.info("Line Number Found... {}", lineNumber);
-                    if (lineNumber == null) {
-                        // Fallback: if AI doesn't provide a line number, try to find a commentable line in the diff
-                        final Set<Integer> commentableLines = parsingService.extractCommentableLines((String) request.diffContent());
-                        if (!commentableLines.isEmpty()) {
-                            lineNumber = commentableLines.iterator().next(); // Get the first commentable line
-                        } else {
-                            lineNumber = 1; // Default to line 1 if no commentable lines are found
+                            String fingerprint = createFingerprint(
+                                    request.pullRequestId(), aiIssue.getFile(), aiIssue.getComment(), issueCategory.name());
+
+                            // Check if this exact feedback already exists for this PR
+                            if (!reviewRepository.existsByPullRequestIdAndFeedbackFingerprint(request.pullRequestId(), fingerprint)) {
+                                Review review = Review.builder()
+                                        .pullRequestId(request.pullRequestId())
+                                        .fileName(aiIssue.getFile())
+                                        .diffContent(request.diffContent())
+                                        .feedback(aiIssue.getComment())
+                                        .category(issueCategory)
+                                        .feedbackFingerprint(fingerprint)
+                                        .derivedSeverityScore(severity)
+                                        .userId(request.author())
+                                        .prUrl(request.prUrl())
+                                        .createdAt(Instant.now())
+                                        .line(lineNumber)
+                                        .build();
+
+                                iteration.addReview(review);
+                                reviewRepository.save(review);
+                                log.info("New unique feedback found and saved for file: {}", aiIssue.getFile());
+                            } else {
+                                log.info("Duplicate feedback detected and skipped for file: {}", aiIssue.getFile());
+                            }
                         }
+                        return inlineReviewResponse; // Return the parsed response
+                    } catch (JsonProcessingException e) {
+                        log.error("Error parsing AI feedback: {}", rawFeedback, e);
+                        throw new RuntimeException("Failed to parse AI feedback", e);
                     }
-
-                    String fingerprint = createFingerprint(
-                            request.pullRequestId(), request.filename(), request.diffContent(), issueCategory.name());
-
-                    Review review = null;
-                    // Check if this exact feedback already exists for this PR
-                    if (!reviewRepository.existsByPullRequestIdAndFeedbackFingerprint(request.pullRequestId(),
-                            fingerprint)) {
-                        review = Review.builder()
-                                .pullRequestId(request.pullRequestId())
-                                .fileName(request.filename())
-                                .diffContent(request.diffContent())
-                                .feedback(feedbackCast)
-                                .category(issueCategory)
-                                .feedbackFingerprint(fingerprint)
-                                .derivedSeverityScore(severity)
-                                .userId(request.author())
-                                .prUrl(request.prUrl())
-                                .createdAt(Instant.now())
-                                .line(lineNumber)
-                                .build();
-
-                        iteration.addReview(review);
-                        reviewRepository.save(review);
-                        log.info("New unique feedback found and saved for file: {}", request.filename());
-                    } else {
-                        log.info("Duplicate feedback detected and skipped for file: {}", request.filename());
-                    }
-                    return review; // Return the Review object
                 });
     }
 

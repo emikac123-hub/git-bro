@@ -1,11 +1,11 @@
 package com.erik.git_bro.service;
 
-import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Test;
-
 import java.util.List;
 
-import static org.junit.jupiter.api.Assertions.*;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 class ParsingServiceTest {
 
@@ -38,7 +38,7 @@ class ParsingServiceTest {
 
         String result = parsingService.cleanChunk(dirtyChunk);
 
-        assertEquals("valid text  more text ", result);
+        assertEquals("valid text  more text", result);
     }
 
     @Test

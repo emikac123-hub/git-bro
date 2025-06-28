@@ -93,7 +93,12 @@ public class ParsingService {
      * @return a cleaned string with illegal control characters removed
      */
     public String cleanChunk(String chunk) {
-        return chunk.replaceAll("[\\p{Cntrl}&&[^\r\n\t]]", "");
+        // Remove ```json and ``` wrappers
+        String cleaned = chunk.replaceAll("(?m)^```(json)?\\s*", "") // start code fence
+                .replaceAll("(?m)^```\\s*", ""); // end code fence
+
+        // Then remove any non-printable control characters (excluding \r, \n, and \t)
+        return cleaned.replaceAll("[\\p{Cntrl}&&[^\r\n\t]]", "").trim();
     }
 
     /**
