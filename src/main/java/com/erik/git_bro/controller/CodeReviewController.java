@@ -152,7 +152,7 @@ public class CodeReviewController {
 
                             StringBuilder markdownSummary = new StringBuilder();
                             markdownSummary.append("### 🤖 AI Review Summary\n");
-                            markdownSummary.append("Posted ").append(issues.size())
+                            markdownSummary.append("Posted ").append(1)
                                     .append(" inline comments.\n\n");
 
                             markdownSummary
@@ -162,7 +162,7 @@ public class CodeReviewController {
                                     .append("\n\n");
 
                             // Populate position for batch comments (already done for single issue)
-                            this.gitHubCommentService.postReviewCommentBatch(token, owner, repo, pullNumber, issues);
+                            this.gitHubCommentService.postReviewCommentBatch(token, owner, repo, pullNumber, List.of(issue));
 
                             return ResponseEntity.ok()
                                     .body(markdownSummary.toString().trim());
