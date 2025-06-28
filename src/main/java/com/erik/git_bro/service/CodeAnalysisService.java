@@ -5,6 +5,7 @@ import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.time.Instant;
+import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 
 import org.springframework.stereotype.Service;
@@ -58,6 +59,17 @@ public class CodeAnalysisService {
                     Category issueCategory = getIssueCategory(feedbackCast);
                     BigDecimal severity = determineSeverity(issueCategory);
                     Integer lineNumber = parsingService.extractLineNumberFromFeedback(feedbackCast);
+
+                    log.info("Line Number Found... {}", lineNumber);
+                    if (lineNumber == null) {
+                        // Fallback: if AI doesn't provide a line number, try to find a commentable line in the diff
+                        final Set<Integer> commentableLines = parsingService.extractCommentableLines((String) request.diffContent());
+                        if (!commentableLines.isEmpty()) {
+                            lineNumber = commentableLines.iterator().next(); // Get the first commentable line
+                        } else {
+                            lineNumber = 1; // Default to line 1 if no commentable lines are found
+                        }
+                    }
 
                     String fingerprint = createFingerprint(
                             request.pullRequestId(), request.filename(), request.diffContent(), issueCategory.name());

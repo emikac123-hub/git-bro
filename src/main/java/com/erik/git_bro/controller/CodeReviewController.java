@@ -83,7 +83,7 @@ public class CodeReviewController {
                         final var reviewCast = (Review) review;
                         final String installationId = gitHubAppTokenService.getInstallationId(owner, repo);
                         final String token = gitHubAppTokenService.getInstallationToken(Long.parseLong(installationId));
-                        
+                        log.info("The Review: {}", review);
                         // Create a list of issues from the single review object
                         List<Issue> issues = List.of(new Issue(reviewCast.getFileName(), reviewCast.getLine(), reviewCast.getFeedback()));
 
