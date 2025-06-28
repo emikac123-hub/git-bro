@@ -90,6 +90,7 @@ public class CodeReviewController {
                         final List<GitDiff> diffsFromPr = this.gitHubAppService.getDiffs(owner, repo, pullNumber);
                         
                         for (Issue issue : issues) {
+                            log.info(issue.getComment());
                             String issueFile = issue.getFile();
                             int line = issue.getLine();
                             String comment = issue.getComment();
