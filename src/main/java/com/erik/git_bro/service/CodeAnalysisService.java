@@ -66,6 +66,7 @@ public class CodeAnalysisService {
                                 .fileName(request.filename())
                                 .diffContent(request.diffContent())
                                 .feedback(feedbackCast)
+                                .category(issueCategory)
                                 .feedbackFingerprint(fingerprint)
                                 .derivedSeverityScore(severity)
                                 .userId(request.author())
