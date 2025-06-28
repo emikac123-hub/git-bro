@@ -231,40 +231,43 @@ public class ParsingService {
         return commentableLines;
     }
 
-    public Integer calculatePositionInDiffHunk(String patch, int absoluteLineNumber) {
+    public Integer calculatePositionInDiffHunk(String patch, int targetLine) {
         String[] lines = patch.split("\n");
+        int position = -1; // position in patch (to be returned)
+        int currentNewLine = -1; // tracks new file line number currently processed
 
-        int newFileLine = 0; // Tracks the absolute line number in the new file
-        int positionInHunk = -1;
-        boolean inTargetHunk = false;
-
+        // The patch may contain multiple hunks, each starting with @@ line
         for (String line : lines) {
             if (line.startsWith("@@")) {
-                // Parse the hunk header to get the new file line number start
-                Matcher matcher = Pattern.compile("\\+([0-9]+)").matcher(line);
+                // Extract starting line number of new file from hunk header
+                Matcher matcher = Pattern.compile("\\+(\\d+)").matcher(line);
                 if (matcher.find()) {
-                    newFileLine = Integer.parseInt(matcher.group(1)) - 1; // -1 because we increment immediately
-                    positionInHunk = -1;
-                    inTargetHunk = true;
-                } else {
-                    inTargetHunk = false;
+                    currentNewLine = Integer.parseInt(matcher.group(1)) - 1; // -1 because we'll increment before
+                                                                             // checking line
+                    position = -1; // reset position for new hunk
                 }
-            } else if (inTargetHunk) {
-                if (line.startsWith(" ") || line.startsWith("+")) {
-                    newFileLine++;
-                    positionInHunk++;
+            } else {
+                position++; // increment position for every line in patch except hunk header
+                char prefix = line.charAt(0);
 
-                    if (newFileLine == absoluteLineNumber && line.startsWith("+")) {
-                        return positionInHunk;
+                if (prefix == '+') {
+                    currentNewLine++; // added line in new file
+                    if (currentNewLine == targetLine) {
+                        return position;
                     }
-                } else if (line.startsWith("-")) {
-                    // Deleted line, only increases positionInHunk
-                    positionInHunk++;
+                } else if (prefix == ' ') {
+                    currentNewLine++; // unchanged line in new file
+                    if (currentNewLine == targetLine) {
+                        return position;
+                    }
+                } else if (prefix == '-') {
+                    // deleted line in old file; does not affect new file line count
+                    // position still increments because it is in the patch,
+                    // but we do NOT increment currentNewLine here
                 }
             }
         }
-
-        return null; // Line not found or not part of added lines
+        return null; // target line not found in patch
     }
 
     public Integer extractLineNumberFromFeedback(String feedback) {
