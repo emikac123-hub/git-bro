@@ -258,21 +258,27 @@ public class ParsingService {
                 position++; // increment position for every line in patch except hunk header
                 char prefix = line.charAt(0);
 
-                if (prefix == '+') {
-                    currentNewLine++; // added line in new file
-                    if (currentNewLine == targetLine) {
-                        return position;
+                switch (prefix) {
+                    case '+' -> {
+                        currentNewLine++; // added line in new file
+                        if (currentNewLine == targetLine) {
+                            return position;
+                        }
                     }
-                } else if (prefix == ' ') {
-                    currentNewLine++; // unchanged line in new file
-                    if (currentNewLine == targetLine) {
-                        return position;
+                    case ' ' -> {
+                        currentNewLine++; // unchanged line in new file
+                        if (currentNewLine == targetLine) {
+                            return position;
+                        }
                     }
-                } else if (prefix == '-') {
-                    // deleted line in old file; does not affect new file line count
-                    // position still increments because it is in the patch,
-                    // but we do NOT increment currentNewLine here
+                    case '-' -> {
+                    }
+                    default -> {
+                    }
                 }
+                // deleted line in old file; does not affect new file line count
+                // position still increments because it is in the patch,
+                // but we do NOT increment currentNewLine here
             }
         }
         return null; // target line not found in patch

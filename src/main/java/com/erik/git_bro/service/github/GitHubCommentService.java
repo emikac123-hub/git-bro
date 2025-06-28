@@ -40,6 +40,23 @@ public class GitHubCommentService {
             String sha) throws IOException {
 
         String url = API.GIT_HUB_COMMENTS(owner, repo, pullNumber);
+        // Defensive checks before building request
+        if (commentBody == null || commentBody.isBlank()) {
+            log.warn("Skipping comment: comment body is null or empty.");
+            return;
+        }
+        if (sha == null || sha.isBlank()) {
+            log.warn("Skipping comment: commit SHA is null or empty.");
+            return;
+        }
+        if (filePath == null || filePath.isBlank()) {
+            log.warn("Skipping comment: file path is null or empty.");
+            return;
+        }
+        if (lineNumber == null || lineNumber <= 0) {
+            log.warn("Skipping comment: line number is null or <= 0.");
+            return;
+        }
 
         // Build request body
         Map<String, Object> json = Map.of(
@@ -91,10 +108,11 @@ public class GitHubCommentService {
                 "comments", reviewComments);
 
         String reviewUrl = API.GIT_HUB_REVIEWS(owner, repo, pullNumber);
-        
+
         Request request = GitHubRequestUtil.withGitHubHeaders(
                 new Request.Builder().url(reviewUrl), githubToken)
-                .post(RequestBody.create(objectMapper.writeValueAsString(reviewBody), MediaType.parse("application/json")))
+                .post(RequestBody.create(objectMapper.writeValueAsString(reviewBody),
+                        MediaType.parse("application/json")))
                 .build();
 
         try (Response response = okClient.newCall(request).execute()) {
