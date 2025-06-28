@@ -131,3 +131,13 @@ Below is the command to start the database. Make sure you have Docker installed.
 ```yaml
 docker compose -f docker-compose-test-db.yml up -d
 ```
+
+### Liquibase Migrations
+
+To apply database migrations using Liquibase, ensure your Docker database is running and then execute:
+
+```bash
+mvn liquibase:update
+```
+
+This command will apply all pending changesets defined in `src/main/resources/db/changelog/db.changelog-master.yaml` to your configured PostgreSQL database.

@@ -1,5 +1,56 @@
 databaseChangeLog:
   - changeSet:
+      id: create-review-iteration-table
+      author: erikmikac
+      changes:
+        - createTable:
+            tableName: review_iteration
+            columns:
+              - column:
+                  name: id
+                  type: BIGINT
+                  autoIncrement: true
+                  constraints:
+                    primaryKey: true
+                    nullable: false
+
+              - column:
+                  name: pull_request_id
+                  type: VARCHAR(255)
+                  constraints:
+                    nullable: false
+
+              - column:
+                  name: commit_sha
+                  type: VARCHAR(255)
+                  constraints:
+                    nullable: false
+
+              - column:
+                  name: push_at
+                  type: TIMESTAMP WITH TIME ZONE
+                  constraints:
+                    nullable: false
+
+              - column:
+                  name: ai_model
+                  type: VARCHAR(255)
+
+              - column:
+                  name: ai_temperature
+                  type: NUMERIC(3,2)
+
+              - column:
+                  name: comment_summary
+                  type: TEXT
+
+              - column:
+                  name: severity_score 
+                  type: VARCHAR(255)
+
+        
+
+  - changeSet:
       id: 1
       author: erikmikac
       changes:
@@ -54,54 +105,17 @@ databaseChangeLog:
             referencedColumnNames: id
 
   - changeSet:
-      id: create-review-iteration-table
+      id: add-review-id-to-review-iteration
       author: erikmikac
       changes:
-        - createTable:
+        - addColumn:
             tableName: review_iteration
             columns:
               - column:
-                  name: id
-                  type: BIGINT
-                  autoIncrement: true
+                  name: review_id
+                  type: UUID
                   constraints:
-                    primaryKey: true
-                    nullable: false
-
-              - column:
-                  name: pull_request_id
-                  type: VARCHAR(255)
-                  constraints:
-                    nullable: false
-
-              - column:
-                  name: commit_sha
-                  type: VARCHAR(255)
-                  constraints:
-                    nullable: false
-
-              - column:
-                  name: push_at
-                  type: TIMESTAMP WITH TIME ZONE
-                  constraints:
-                    nullable: false
-
-              - column:
-                  name: ai_model
-                  type: VARCHAR(255)
-
-              - column:
-                  name: ai_temperature
-                  type: NUMERIC(3,2)
-
-              - column:
-                  name: comment_summary
-                  type: TEXT
-
-              - column:
-                  name: severity_score 
-                  type: VARCHAR(255)
-
+                    nullable: true
         - addForeignKeyConstraint:
             baseTableName: review_iteration
             baseColumnNames: review_id
