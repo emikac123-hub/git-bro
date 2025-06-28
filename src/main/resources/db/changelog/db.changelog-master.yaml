@@ -68,6 +68,11 @@ databaseChangeLog:
             tableName: review
             columns:
               - column:
+                  name: pull_request_id
+                  type: VARCHAR(255)
+                  constraints:
+                    nullable: false
+              - column:
                   name: id
                   type: UUID
                   constraints:
