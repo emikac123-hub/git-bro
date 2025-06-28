@@ -115,6 +115,27 @@ databaseChangeLog:
             referencedColumnNames: id
 
   - changeSet:
+      id: add-category-not-null-and-default
+      author: erikmikac
+      preConditions:
+        - onFail: MARK_RAN
+        - columnExists:
+            columnName: category
+            tableName: review
+        - not:
+            columnExists:
+              columnName: category
+              tableName: review
+              constraints:
+                nullable: false
+      changes:
+        - addNotNullConstraint:
+            tableName: review
+            columnName: category
+            columnDataType: VARCHAR(255)
+            defaultValue: 'GENERAL'
+
+  - changeSet:
       id: add-pull-request-id-and-feedback-fingerprint-to-review
       author: erikmikac
       preConditions:
