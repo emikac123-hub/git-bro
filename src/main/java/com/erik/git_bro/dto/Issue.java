@@ -9,6 +9,7 @@ import lombok.NoArgsConstructor;
 @NoArgsConstructor
 public class Issue {
     private String file;
-    private int line;
+    private int line; // Absolute line number
+    private int position; // Line number within the diff hunk
     private String comment;
 }
