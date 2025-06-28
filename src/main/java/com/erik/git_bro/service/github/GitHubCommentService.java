@@ -78,7 +78,7 @@ public class GitHubCommentService {
                     Map<String, Object> comment = new HashMap<>();
                     comment.put("path", issue.getFile());
                     comment.put("line", issue.getLine());
-                
+                    comment.put("position", issue.getPosition());
                     comment.put("side", "RIGHT");
                     comment.put("body", issue.getComment());
                     return comment;

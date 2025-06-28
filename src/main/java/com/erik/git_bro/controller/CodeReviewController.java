@@ -84,10 +84,10 @@ public class CodeReviewController {
                             log.info("The InlineReviewResponse: {}", inlineReviewResponse);
 
                             final List<GitDiff> diffsFromPr = this.gitHubAppService.getDiffs(owner, repo, pullNumber);
-                            
+
                             List<Issue> issuesToPost = new java.util.ArrayList<>();
 
-                            for (com.erik.git_bro.dto.Issue aiIssue : inlineReviewResponse.getIssues()) {
+                            for (Issue aiIssue : inlineReviewResponse.getIssues()) {
                                 String issueFile = aiIssue.getFile();
                                 int line = aiIssue.getLine();
                                 String comment = aiIssue.getComment();
@@ -95,9 +95,24 @@ public class CodeReviewController {
                                 // Find the matching GitDiff
                                 Optional<GitDiff> matchingDiff = diffsFromPr.stream()
                                         .filter(d -> {
-                                            log.info("Comparing issueFile: {} with GitDiff filename: {}", issueFile,
-                                                    d.getFilename());
-                                            return d.getFilename().equals(issueFile);
+                                            String diffFilename = normalizePath(d.getFilename());
+                                            String issueFilename = normalizePath(issueFile);
+
+                                            boolean matches = diffFilename.equals(issueFilename);
+
+                                            if (!matches) {
+                                                log.debug("Skipping mismatch: Issue file '{}' vs. Diff file '{}'",
+                                                        issueFilename, diffFilename);
+                                            }
+
+                                            // Additional guard: patch must exist
+                                            if (d.getPatch() == null || d.getPatch().isBlank()) {
+                                                log.warn("Skipping file '{}': patch is null or empty.",
+                                                        d.getFilename());
+                                                return false;
+                                            }
+
+                                            return matches;
                                         })
                                         .findFirst();
 
@@ -112,6 +127,10 @@ public class CodeReviewController {
                                         if (validLines.contains(line)) {
                                             Integer position = this.parsingService
                                                     .calculatePositionInDiffHunk(gitDiff.getPatch(), line);
+                                            if (position == null) {
+                                                log.warn("Skipping: Cannot determine diff position for line {}", line);
+                                                continue;
+                                            }
                                             if (position != null) {
                                                 gitHubCommentService.postBlockComments(
                                                         token,
@@ -147,12 +166,15 @@ public class CodeReviewController {
                                 markdownSummary
                                         .append("- **File**: `").append(issue.getFile()).append("`\n")
                                         .append("  - **Line**: ").append(issue.getLine()).append("\n")
-                                        .append("  - **Comment**: ").append(issue.getComment().replaceAll("\n", " ").trim())
+                                        .append("  - **Comment**: ")
+                                        .append(issue.getComment().replaceAll("\n", " ").trim())
                                         .append("\n\n");
                             }
-                            markdownSummary.append("**Recommendation**: ").append(inlineReviewResponse.getRecommendation()).append("\n");
+                            markdownSummary.append("**Recommendation**: ")
+                                    .append(inlineReviewResponse.getRecommendation()).append("\n");
 
-                        //    this.gitHubCommentService.postReviewCommentBatch(token, owner, repo, pullNumber, issuesToPost);
+                            // this.gitHubCommentService.postReviewCommentBatch(token, owner, repo,
+                            // pullNumber, issuesToPost);
 
                             return ResponseEntity.ok()
                                     .body(markdownSummary.toString().trim());
@@ -187,6 +209,17 @@ public class CodeReviewController {
         }
 
         return ResponseEntity.status(500).body(error);
+    }
+
+    private String normalizePath(String path) {
+        if (path == null)
+            return "";
+
+        return path
+                .trim()
+                .replace("\\", "/") // Normalize Windows paths
+                .replaceFirst("^\\./", "") // Remove leading "./"
+                .toLowerCase(); // Optional: make case-insensitive if needed
     }
 
 }
