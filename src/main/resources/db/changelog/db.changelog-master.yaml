@@ -21,10 +21,10 @@ databaseChangeLog:
                   type: VARCHAR(512)
               - column:
                   name: diff_content
-                  type: CLOB
+                  type: TEXT
               - column:
                   name: feedback
-                  type: CLOB
+                  type: TEXT
               - column:
                   name: model_used
                   type: VARCHAR(100)

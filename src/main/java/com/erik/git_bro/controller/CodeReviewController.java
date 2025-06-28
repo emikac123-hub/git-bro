@@ -97,10 +97,12 @@ public class CodeReviewController {
     public CompletableFuture<ResponseEntity<?>> postInlineComment(@RequestParam("file") MultipartFile file,
             @RequestParam("owner") String owner,
             @RequestParam("repo") String repo,
-            @RequestParam("pullNumber") int pullNumber) throws IOException {
+            @RequestParam("pullNumber") int pullNumber,
+            @RequestParam("prUrl") String prUrl,
+            @RequestParam("prAuthor") String prAuthor) throws IOException {
         String diff = new String(file.getBytes(), StandardCharsets.UTF_8);
 
-        return this.codeAnalysisService.analyzeFileLineByLine(file.getName(), diff)
+        return this.codeAnalysisService.analyzeFileLineByLine(file.getName(), diff, owner, repo, pullNumber, prAuthor, prUrl)
                 .handle((feedback, throwable) -> {
                     if (throwable != null) {
                         return this.showResponse((String) feedback, throwable, "Failure to analyze code by line.");
@@ -191,4 +193,5 @@ public class CodeReviewController {
 
         return ResponseEntity.status(500).body(error);
     }
+
 }
