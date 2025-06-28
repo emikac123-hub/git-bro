@@ -93,7 +93,12 @@ public class ParsingService {
      * @return a cleaned string with illegal control characters removed
      */
     public String cleanChunk(String chunk) {
-        return chunk.replaceAll("[\\p{Cntrl}&&[^\r\n\t]]", "");
+        // Remove ```json and ``` wrappers
+        String cleaned = chunk.replaceAll("(?m)^```(json)?\\s*", "") // start code fence
+                .replaceAll("(?m)^```\\s*", ""); // end code fence
+
+        // Then remove any non-printable control characters (excluding \r, \n, and \t)
+        return cleaned.replaceAll("[\\p{Cntrl}&&[^\r\n\t]]", "").trim();
     }
 
     /**
@@ -224,6 +229,37 @@ public class ParsingService {
         }
 
         return commentableLines;
+    }
+
+    public Integer calculatePositionInDiffHunk(String patch, int absoluteLineNumber) {
+        String[] lines = patch.split("\n");
+        int currentAbsoluteLine = -1;
+        int position = -1;
+
+        for (int i = 0; i < lines.length; i++) {
+            String line = lines[i];
+            if (line.startsWith("@@")) {
+                Matcher matcher = Pattern.compile("\\+([0-9]+)").matcher(line);
+                if (matcher.find()) {
+                    currentAbsoluteLine = Integer.parseInt(matcher.group(1));
+                }
+                position = -1; // Reset position for new hunk
+            } else if (line.startsWith("+")) {
+                position++;
+                if (currentAbsoluteLine == absoluteLineNumber) {
+                    return position;
+                }
+                currentAbsoluteLine++;
+            } else if (line.startsWith(" ")) {
+                position++;
+                currentAbsoluteLine++;
+            } else if (line.startsWith("-")) {
+                // Decrement currentAbsoluteLine for removed lines, but don't increment position
+                // as they are not part of the new file
+                currentAbsoluteLine++;
+            }
+        }
+        return null; // Line not found in diff hunk
     }
 
     public Integer extractLineNumberFromFeedback(String feedback) {
