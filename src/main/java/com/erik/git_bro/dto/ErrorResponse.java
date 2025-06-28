@@ -1,4 +1,4 @@
-package com.erik.git_bro.model;
+package com.erik.git_bro.dto;
 
 import lombok.AllArgsConstructor;
 import lombok.Builder;

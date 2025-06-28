@@ -26,7 +26,7 @@ databaseChangeLog:
                   name: feedback
                   type: TEXT
               - column:
-                  name: model_used
+                  name: ai_model
                   type: VARCHAR(100)
               - column:
                   name: user_id
@@ -39,5 +39,61 @@ databaseChangeLog:
                   type: BOOLEAN
                   defaultValueBoolean: false
               - column:
-                  name: severity_score
+                  name: derived_severity_score
                   type: DECIMAL(3,2)
+
+  - changeSet:
+      id: create-review-iteration-table
+      author: erikmikac
+      changes:
+        - createTable:
+            tableName: review_iteration
+            columns:
+              - column:
+                  name: id
+                  type: BIGINT
+                  autoIncrement: true
+                  constraints:
+                    primaryKey: true
+                    nullable: false
+
+              - column:
+                  name: review_id
+                  type: UUID  # ✅ Match the review table's primary key type
+                  constraints:
+                    nullable: false
+
+              - column:
+                  name: commit_sha
+                  type: VARCHAR(255)
+                  constraints:
+                    nullable: false
+
+              - column:
+                  name: push_at
+                  type: TIMESTAMP WITH TIME ZONE
+                  constraints:
+                    nullable: false
+
+              - column:
+                  name: ai_model
+                  type: VARCHAR(255)
+
+              - column:
+                  name: ai_temperature
+                  type: NUMERIC(3,2)
+
+              - column:
+                  name: comment_summary
+                  type: TEXT
+
+              - column:
+                  name: severity_score 
+                  type: VARCHAR(255)
+
+        - addForeignKeyConstraint:
+            baseTableName: review_iteration
+            baseColumnNames: review_id
+            constraintName: fk_review_iteration_review
+            referencedTableName: review
+            referencedColumnNames: id

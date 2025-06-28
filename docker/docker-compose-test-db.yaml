@@ -1,0 +1,16 @@
+version: "3.8"
+services:
+  gitbro-test-db:
+    image: postgres:alpine
+    container_name: gitbro-test-db
+    ports:
+      - "5433:5432"
+    environment:
+      POSTGRES_DB: gitbro_test
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: pass
+    volumes:
+      - gitbro-test-data:/var/lib/postgresql/data
+    restart: unless-stopped
+volumes:
+  gitbro-test-data:

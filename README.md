@@ -15,6 +15,30 @@
 
 ---
 
+## AI Model Selection
+
+This application supports dynamic selection of the AI model used for code analysis. The desired model is specified as an input parameter in the POST request to the `/api/review/analyze-file-by-line` endpoint.
+
+Currently supported models:
+-   `chatgpt`: Utilizes the OpenAI ChatGPT API for code analysis.
+-   `gemini`: Utilizes the Google Gemini API for code analysis.
+
+To specify the model, include a `modelName` parameter in your request with one of the supported values.
+
+---
+
+## Data Model: Review vs. ReviewIteration
+
+In this application, we distinguish between `ReviewIteration` and `Review` to accurately model the code review process:
+
+-   **`ReviewIteration`**: Represents a single, complete run of the AI code review process for a specific pull request. Each `ReviewIteration` is uniquely identified by the pull request ID and the commit SHA it was run against. It acts as a container for all individual review comments generated during that particular analysis.
+
+-   **`Review`**: Represents an individual AI-generated comment or issue found during a `ReviewIteration`. Each `Review` is associated with a specific `ReviewIteration` and contains details such as the file name, the line number, the comment itself, and a derived severity score.
+
+Essentially, one `ReviewIteration` can contain multiple `Review` objects, providing a historical record of all AI feedback for each analysis run on a pull request.
+
+---
+
 ## 📁 Project Structure
 
 ```yaml
@@ -22,7 +46,7 @@
 src
 ├── main
 │ ├── java/com/erik/git_bro
-│ │ ├── client # AI clients (e.g., CodeBERT)
+│ │ ├── client # AI clients (e.g., Gemini, ChatGPT)
 │ │ ├── config # Async executor config
 │ │ ├── controller # REST API
 │ │ ├── model # JPA entities
@@ -101,7 +125,7 @@ to start the server. Then, copy and paste it into the work flow step "Call Code 
 ```
 
 ## DATABASE
-For local developlment, I'm using a non-ephemeral Postgres database. Orignially, I was using H2, but needed something that would last longer.
+For local development, I'm using a non-ephemeral Postgres database. Originally, I was using H2, but needed something that would last longer.
 Below is the command to start the database. Make sure you have Docker installed.
 
 ```yaml
