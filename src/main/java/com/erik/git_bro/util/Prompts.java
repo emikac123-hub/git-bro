@@ -49,8 +49,11 @@ public class Prompts {
 
                         * Use exact file name and line number from this diff.
                         * If unsure about line number, provide best guess based on context.
-                        * Provide a code snippet to illustrate your point.
-                        * If no issues are found, return: { "issues": [], "recommendation": "merge" }
+                        * If no SERIOUS issues are found, return: { "issues": [], "recommendation": "merge" }
+                        * Only say "do not merge" if
+                          - Major security bug found
+                          - Serious maintainability issues found.
+                          - Causes a bug.
                         * Do NOT include extra explanation or markdown — return pure JSON.
 
 
