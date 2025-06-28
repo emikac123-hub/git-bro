@@ -56,7 +56,7 @@ databaseChangeLog:
         
 
   - changeSet:
-      id: 1
+      id: create-review
       author: erikmikac
       preConditions:
         - onFail: MARK_RAN
@@ -113,6 +113,40 @@ databaseChangeLog:
             constraintName: fk_review_review_iteration
             referencedTableName: review_iteration
             referencedColumnNames: id
+
+  - changeSet:
+      id: add-pull-request-id-and-feedback-fingerprint-to-review
+      author: erikmikac
+      preConditions:
+        - onFail: MARK_RAN
+        - not:
+            columnExists:
+              columnName: pull_request_id
+              tableName: review
+      changes:
+        - addColumn:
+            tableName: review
+            columns:
+              - column:
+                  name: pull_request_id
+                  type: VARCHAR(255)
+                  constraints:
+                    nullable: true
+        - addColumn:
+            tableName: review
+            columns:
+              - column:
+                  name: feedback_fingerprint
+                  type: VARCHAR(255)
+                  constraints:
+                    nullable: true
+        - dropColumn:
+            tableName: review
+            columnName: pr_url
+        - addUniqueConstraint:
+            tableName: review
+            columnNames: pull_request_id, feedback_fingerprint
+            constraintName: uc_review_pull_request_id_feedback_fingerprint
 
   - changeSet:
       id: add-review-id-to-review-iteration
