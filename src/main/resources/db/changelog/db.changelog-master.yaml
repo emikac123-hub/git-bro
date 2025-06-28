@@ -111,6 +111,9 @@ databaseChangeLog:
                     name: category
                     type: VARCHAR(100)
               - column:
+                    name: feedback_fingerprint
+                    type: VARCHAR(256)
+              - column:
                   name: review_iteration_id
                   type: BIGINT
                   constraints:
