@@ -145,9 +145,18 @@ public class CodeReviewController {
                     Integer position = this.parsingService.calculatePositionInDiffHunk(gitDiff.getPatch(), line);
                     String diffHunk = this.parsingService.extractDiffHunkForLine(gitDiff.getPatch(), line);
 
-                    if (position != null && diffHunk != null) {
+                    if (position != null && diffHunk != null && !diffHunk.isBlank()) {
                         gitHubCommentService.postBlockComments(
-                                token, owner, repo, pullNumber, issueFile, position, comment, sha, diffHunk);
+                                token,
+                                owner,
+                                repo,
+                                pullNumber,
+                                issueFile,
+                                line,
+                                comment,
+                                sha,
+                                position,
+                                diffHunk);
                         postedIssues.add(new Issue(issueFile, line, position, comment));
                     } else {
                         log.warn(
