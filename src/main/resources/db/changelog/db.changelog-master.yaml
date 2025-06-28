@@ -2,6 +2,11 @@ databaseChangeLog:
   - changeSet:
       id: create-review-iteration-table
       author: erikmikac
+      preConditions:
+        - onFail: MARK_RAN
+        - not:
+            tableExists:
+              tableName: review_iteration
       changes:
         - createTable:
             tableName: review_iteration
@@ -53,6 +58,11 @@ databaseChangeLog:
   - changeSet:
       id: 1
       author: erikmikac
+      preConditions:
+        - onFail: MARK_RAN
+        - not:
+            tableExists:
+              tableName: review
       changes:
         - createTable:
             tableName: review
@@ -107,6 +117,12 @@ databaseChangeLog:
   - changeSet:
       id: add-review-id-to-review-iteration
       author: erikmikac
+      preConditions:
+        - onFail: MARK_RAN
+        - not:
+            columnExists:
+              columnName: review_id
+              tableName: review_iteration
       changes:
         - addColumn:
             tableName: review_iteration
