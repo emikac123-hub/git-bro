@@ -292,4 +292,64 @@ public class ParsingService {
         }
         return null; // Or throw an exception, depending on desired behavior
     }
+
+    public String extractDiffHunkForLine(String patch, int targetLine) {
+        String[] lines = patch.split("\n");
+        StringBuilder hunkBuilder = new StringBuilder();
+
+        boolean insideHunk = false;
+        int hunkStartLine = -1;
+        int hunkNewLineStart = -1;
+        int hunkNewLineCount = -1;
+        int currentNewLine = -1;
+
+        for (int i = 0; i < lines.length; i++) {
+            String line = lines[i];
+            if (line.startsWith("@@")) {
+                // If we were inside a hunk but didn't find the target line, reset builder
+                if (insideHunk) {
+                    // We reached new hunk header, so stop
+                    break;
+                }
+                insideHunk = true;
+                hunkBuilder.setLength(0); // reset builder
+                hunkBuilder.append(line).append("\n");
+
+                // Parse new file start line and count from hunk header
+                Matcher matcher = Pattern.compile("\\+(\\d+),(\\d+)").matcher(line);
+                if (matcher.find()) {
+                    hunkNewLineStart = Integer.parseInt(matcher.group(1));
+                    hunkNewLineCount = Integer.parseInt(matcher.group(2));
+                    currentNewLine = hunkNewLineStart - 1; // minus 1 because we increment before line check
+                } else {
+                    // If count missing, fallback to 1
+                    matcher = Pattern.compile("\\+(\\d+)").matcher(line);
+                    if (matcher.find()) {
+                        hunkNewLineStart = Integer.parseInt(matcher.group(1));
+                        hunkNewLineCount = 1;
+                        currentNewLine = hunkNewLineStart - 1;
+                    }
+                }
+            } else if (insideHunk) {
+                hunkBuilder.append(line).append("\n");
+                char prefix = line.charAt(0);
+
+                if (prefix == '+' || prefix == ' ') {
+                    currentNewLine++;
+                    if (currentNewLine == targetLine) {
+                        // This hunk contains the target line, so continue collecting lines
+                        // We keep appending until next hunk or end of patch
+                    }
+                }
+                // If the line is '-', do not increment currentNewLine, but append line
+
+                // Important: To detect if the hunk contains the target line,
+                // we keep insideHunk true. If after all lines in patch no new hunk header,
+                // it means this is the correct hunk.
+            }
+        }
+
+        return insideHunk ? hunkBuilder.toString().trim() : null;
+    }
+
 }

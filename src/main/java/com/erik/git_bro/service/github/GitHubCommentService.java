@@ -33,11 +33,13 @@ public class GitHubCommentService {
             String githubToken,
             String owner,
             String repo,
-            int pullNumber,
+            Integer pullNumber,
             String filePath,
             int lineNumber,
             String commentBody,
-            String sha) throws IOException {
+            String sha,
+            Integer position,
+            String diffHunk) throws IOException {
 
         String url = API.GIT_HUB_COMMENTS(owner, repo, pullNumber);
         // Defensive checks before building request
@@ -63,8 +65,9 @@ public class GitHubCommentService {
                 "body", commentBody,
                 "commit_id", sha,
                 "path", filePath,
-                "line", lineNumber,
-                "side", "RIGHT");
+                "position", position,
+                "side", "RIGHT",
+                "diff_hunk", diffHunk);
 
         String jsonBody = objectMapper.writeValueAsString(json);
 

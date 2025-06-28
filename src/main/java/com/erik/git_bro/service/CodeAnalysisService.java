@@ -32,7 +32,7 @@ public class CodeAnalysisService {
 
     private final ChatGPTClient chatGPTClient;
     private final GeminiClient geminiClient;
-    
+
     private final ReviewRepository reviewRepository;
     private final ReviewIterationService reviewIterationService;
     private final ParsingService parsingService;
@@ -47,9 +47,11 @@ public class CodeAnalysisService {
 
         CompletableFuture<String> feedbackFuture;
         if ("chatgpt".equalsIgnoreCase(modelName)) {
-             feedbackFuture = (CompletableFuture<String>) chatGPTClient.analyzeFileLineByLine(request.filename(), request.diffContent());
+            feedbackFuture = (CompletableFuture<String>) chatGPTClient.analyzeFileLineByLine(request.filename(),
+                    request.diffContent());
         } else if ("gemini".equalsIgnoreCase(modelName)) {
-            feedbackFuture = (CompletableFuture<String>) geminiClient.analyzeFileLineByLine(request.filename(), request.diffContent());
+            feedbackFuture = (CompletableFuture<String>) geminiClient.analyzeFileLineByLine(request.filename(),
+                    request.diffContent());
         } else {
             CompletableFuture<InlineReviewResponse> future = new CompletableFuture<>();
             future.completeExceptionally(new IllegalArgumentException("Unsupported AI model: " + modelName));
@@ -60,7 +62,8 @@ public class CodeAnalysisService {
                 .thenApplyAsync(rawFeedback -> {
                     try {
                         String cleanFeedback = parsingService.cleanChunk(rawFeedback);
-                        InlineReviewResponse inlineReviewResponse = objectMapper.readValue(cleanFeedback, InlineReviewResponse.class);
+                        InlineReviewResponse inlineReviewResponse = objectMapper.readValue(cleanFeedback,
+                                InlineReviewResponse.class);
 
                         for (Issue aiIssue : inlineReviewResponse.getIssues()) {
                             Category issueCategory = getIssueCategory(aiIssue.getComment());
@@ -68,10 +71,13 @@ public class CodeAnalysisService {
                             Integer lineNumber = aiIssue.getLine(); // AI should provide line number
 
                             String fingerprint = createFingerprint(
-                                    request.pullRequestId(), aiIssue.getFile(), aiIssue.getComment(), issueCategory.name());
+                                    request.pullRequestId(), aiIssue.getFile(), aiIssue.getComment(),
+                                    issueCategory.name());
+         
 
                             // Check if this exact feedback already exists for this PR
-                            if (!reviewRepository.existsByPullRequestIdAndFeedbackFingerprint(request.pullRequestId(), fingerprint)) {
+                            if (!reviewRepository.existsByPullRequestIdAndFeedbackFingerprint(request.pullRequestId(),
+                                    fingerprint)) {
                                 Review review = Review.builder()
                                         .pullRequestId(request.pullRequestId())
                                         .fileName(aiIssue.getFile())

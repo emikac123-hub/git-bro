@@ -70,7 +70,8 @@ public class CodeReviewController {
                     prAuthor);
 
             return this.codeAnalysisService.analyzeDiff(request, modelName)
-                    .handle((inlineReviewResponse, throwable) -> processAnalysisResult(inlineReviewResponse, throwable, owner, repo, pullNumber, sha));
+                    .handle((inlineReviewResponse, throwable) -> processAnalysisResult(inlineReviewResponse, throwable,
+                            owner, repo, pullNumber, sha));
         } catch (Exception e) {
             log.error("Failed to get SHA or prepare analysis request", e);
             return CompletableFuture
@@ -78,7 +79,8 @@ public class CodeReviewController {
         }
     }
 
-    private ResponseEntity<?> processAnalysisResult(Object inlineReviewResponseObj, Throwable throwable, String owner, String repo, int pullNumber, String sha) {
+    private ResponseEntity<?> processAnalysisResult(Object inlineReviewResponseObj, Throwable throwable, String owner,
+            String repo, int pullNumber, String sha) {
         if (throwable != null) {
             return this.showResponse((String) null, throwable, "Failure to analyze code by line.");
         }
@@ -95,7 +97,8 @@ public class CodeReviewController {
 
             final List<GitDiff> diffsFromPr = this.gitHubAppService.getDiffs(owner, repo, pullNumber);
 
-            List<Issue> postedIssues = postIndividualComments(inlineReviewResponse.getIssues(), token, owner, repo, pullNumber, sha, diffsFromPr);
+            List<Issue> postedIssues = postIndividualComments(inlineReviewResponse.getIssues(), token, owner, repo,
+                    pullNumber, sha, diffsFromPr);
 
             String markdownSummary = buildReviewSummary(postedIssues, inlineReviewResponse.getRecommendation());
 
@@ -109,7 +112,8 @@ public class CodeReviewController {
         }
     }
 
-    private List<Issue> postIndividualComments(List<Issue> aiIssues, String token, String owner, String repo, int pullNumber, String sha, List<GitDiff> diffsFromPr) throws IOException {
+    private List<Issue> postIndividualComments(List<Issue> aiIssues, String token, String owner, String repo,
+            int pullNumber, String sha, List<GitDiff> diffsFromPr) throws IOException {
         List<Issue> postedIssues = new ArrayList<>();
         for (Issue aiIssue : aiIssues) {
             String issueFile = aiIssue.getFile();
@@ -122,7 +126,8 @@ public class CodeReviewController {
                         String issueFilename = normalizePath(issueFile);
                         boolean matches = diffFilename.equals(issueFilename);
                         if (!matches) {
-                            log.debug("Skipping mismatch: Issue file '{}' vs. Diff file '{}'", issueFilename, diffFilename);
+                            log.debug("Skipping mismatch: Issue file '{}' vs. Diff file '{}'", issueFilename,
+                                    diffFilename);
                         }
                         if (d.getPatch() == null || d.getPatch().isBlank()) {
                             log.warn("Skipping file '{}': patch is null or empty.", d.getFilename());
@@ -138,12 +143,16 @@ public class CodeReviewController {
 
                 if (validLines.contains(line)) {
                     Integer position = this.parsingService.calculatePositionInDiffHunk(gitDiff.getPatch(), line);
-                    if (position != null) {
+                    String diffHunk = this.parsingService.extractDiffHunkForLine(gitDiff.getPatch(), line);
+
+                    if (position != null && diffHunk != null) {
                         gitHubCommentService.postBlockComments(
-                                token, owner, repo, pullNumber, issueFile, position, comment, sha);
+                                token, owner, repo, pullNumber, issueFile, position, comment, sha, diffHunk);
                         postedIssues.add(new Issue(issueFile, line, position, comment));
                     } else {
-                        log.warn("Skipping comment: Could not calculate position for line {} in {}.", line, issueFile);
+                        log.warn(
+                                "Skipping comment: Could not calculate position or extract diff hunk for line {} in {}.",
+                                line, issueFile);
                     }
                 } else {
                     log.warn("Skipping comment: line {} in {} is not part of diff.", line, issueFile);
