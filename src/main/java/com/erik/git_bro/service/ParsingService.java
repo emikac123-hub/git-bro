@@ -222,9 +222,17 @@ public class ParsingService {
                     newLineNum = Integer.parseInt(matcher.group(1)) - 1;
                 }
             } else if (line.startsWith("+") && !line.startsWith("+++")) {
+                // Added line: increment and add
                 commentableLines.add(++newLineNum);
-            } else if (!line.startsWith("-")) {
-                newLineNum++;
+            } else if (line.startsWith(" ")) {
+                // Unchanged line: increment and add
+                commentableLines.add(++newLineNum);
+            } else if (line.startsWith("-")) {
+                // Deleted line: do NOT increment newLineNum, do nothing
+            } else {
+                // Any other lines, like metadata, might be safe to ignore or increment
+                // cautiously
+                // But typically these won't occur here; you might log or ignore
             }
         }
 
