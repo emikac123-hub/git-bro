@@ -89,6 +89,7 @@ databaseChangeLog:
               - column:
                   name: diff_content
                   type: TEXT
+                  
               - column:
                   name: feedback
                   type: TEXT
@@ -114,6 +115,9 @@ databaseChangeLog:
               - column:
                   name: feedback_fingerprint
                   type: VARCHAR(256)
+              - column:
+                  name: line
+                  type: INTEGER
               - column:
                   name: review_iteration_id
                   type: UUID
