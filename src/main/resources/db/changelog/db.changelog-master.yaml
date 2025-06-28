@@ -103,6 +103,9 @@ databaseChangeLog:
                   name: derived_severity_score
                   type: DECIMAL(3,2)
               - column:
+                    name: category
+                    type: VARCHAR(100)
+              - column:
                   name: review_iteration_id
                   type: BIGINT
                   constraints:
@@ -114,82 +117,4 @@ databaseChangeLog:
             referencedTableName: review_iteration
             referencedColumnNames: id
 
-  - changeSet:
-      id: add-category-not-null-and-default
-      author: erikmikac
-      preConditions:
-        - onFail: MARK_RAN
-        - columnExists:
-            columnName: category
-            tableName: review
-        - not:
-            columnExists:
-              columnName: category
-              tableName: review
-              constraints:
-                nullable: false
-      changes:
-        - addNotNullConstraint:
-            tableName: review
-            columnName: category
-            columnDataType: VARCHAR(255)
-            defaultValue: 'GENERAL'
-
-  - changeSet:
-      id: add-pull-request-id-and-feedback-fingerprint-to-review
-      author: erikmikac
-      preConditions:
-        - onFail: MARK_RAN
-        - not:
-            columnExists:
-              columnName: pull_request_id
-              tableName: review
-      changes:
-        - addColumn:
-            tableName: review
-            columns:
-              - column:
-                  name: pull_request_id
-                  type: VARCHAR(255)
-                  constraints:
-                    nullable: true
-        - addColumn:
-            tableName: review
-            columns:
-              - column:
-                  name: feedback_fingerprint
-                  type: VARCHAR(255)
-                  constraints:
-                    nullable: true
-        - dropColumn:
-            tableName: review
-            columnName: pr_url
-        - addUniqueConstraint:
-            tableName: review
-            columnNames: pull_request_id, feedback_fingerprint
-            constraintName: uc_review_pull_request_id_feedback_fingerprint
-
-  - changeSet:
-      id: add-review-id-to-review-iteration
-      author: erikmikac
-      preConditions:
-        - onFail: MARK_RAN
-        - not:
-            columnExists:
-              columnName: review_id
-              tableName: review_iteration
-      changes:
-        - addColumn:
-            tableName: review_iteration
-            columns:
-              - column:
-                  name: review_id
-                  type: UUID
-                  constraints:
-                    nullable: true
-        - addForeignKeyConstraint:
-            baseTableName: review_iteration
-            baseColumnNames: review_id
-            constraintName: fk_review_iteration_review
-            referencedTableName: review
-            referencedColumnNames: id
+  
