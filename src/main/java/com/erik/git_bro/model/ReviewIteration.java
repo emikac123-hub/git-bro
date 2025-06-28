@@ -3,12 +3,13 @@ package com.erik.git_bro.model;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.UUID;
+
+import org.hibernate.annotations.UuidGenerator;
 
 import jakarta.persistence.CascadeType;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
-import jakarta.persistence.GeneratedValue;
-import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.OneToMany;
 import lombok.AllArgsConstructor;
@@ -24,8 +25,9 @@ import lombok.NoArgsConstructor;
 public class ReviewIteration {
 
     @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Long id;
+    @UuidGenerator
+    @Column(columnDefinition = "UUID", updatable = false, nullable = false)
+    private UUID id;
 
     @Column(nullable = false)
     private String pullRequestId;
@@ -37,14 +39,10 @@ public class ReviewIteration {
     // The timestamp of the push/analysis
     @Column(nullable = false)
     private Instant pushAt;
-    
+
     // Each iteration can have multiple review comments.
     // 'mappedBy' indicates that the Review entity owns the relationship.
-    @OneToMany(
-        mappedBy = "reviewIteration", 
-        cascade = CascadeType.ALL, 
-        orphanRemoval = true
-    )
+    @OneToMany(mappedBy = "reviewIteration", cascade = CascadeType.ALL, orphanRemoval = true)
     @Builder.Default
     private List<Review> reviews = new ArrayList<>();
 
