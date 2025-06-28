@@ -53,7 +53,7 @@ public class GitHubCommentService {
             log.warn("Skipping comment: file path is null or empty.");
             return;
         }
-        if (lineNumber == null || lineNumber <= 0) {
+        if (lineNumber <= 0) {
             log.warn("Skipping comment: line number is null or <= 0.");
             return;
         }
