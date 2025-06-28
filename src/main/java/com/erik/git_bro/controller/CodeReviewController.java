@@ -97,12 +97,20 @@ public class CodeReviewController {
 
                             // Find the matching GitDiff
                             Optional<GitDiff> matchingDiff = diffsFromPr.stream()
-                                    .filter(d -> d.getFilename().equals(issueFile))
+                                    .filter(d -> {
+                                        log.info("Comparing issueFile: {} with GitDiff filename: {}", issueFile, d.getFilename());
+                                        return d.getFilename().equals(issueFile);
+                                    })
                                     .findFirst();
 
                             if (matchingDiff.isPresent()) {
+                                GitDiff gitDiff = matchingDiff.get();
+                                if (gitDiff.getPatch() == null || gitDiff.getPatch().isBlank()) {
+                                    log.warn("Skipping comment: Diff patch is blank for file: {}", issueFile);
+                                    continue; // Skip to the next issue
+                                }
                                 Set<Integer> validLines = this.parsingService
-                                        .extractCommentableLines(matchingDiff.get().getPatch());
+                                        .extractCommentableLines(gitDiff.getPatch());
 
                                 if (validLines.contains(line)) {
                                     gitHubCommentService.postBlockComments(
