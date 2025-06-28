@@ -162,7 +162,7 @@ public class CodeReviewController {
                                     .append("\n\n");
 
                             // Populate position for batch comments (already done for single issue)
-                            this.gitHubCommentService.postReviewCommentBatch(token, owner, repo, pullNumber, List.of(issue));
+                         //   this.gitHubCommentService.postReviewCommentBatch(token, owner, repo, pullNumber, List.of(issue));
 
                             return ResponseEntity.ok()
                                     .body(markdownSummary.toString().trim());
