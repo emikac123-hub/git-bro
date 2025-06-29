@@ -39,8 +39,8 @@ To specify the model, include a `modelName` parameter in your request with one o
 
 To accurately model the code review process, this application distinguishes between `ReviewIteration` and `Review`:
 
--   **`ReviewIteration`**: Represents a single, complete run of the AI code review process for a specific pull request. Each `ReviewIteration` is uniquely identified by the pull request ID and the commit SHA it was run against. It acts as a container for all individual review comments generated during that particular analysis.
--   **`Review`**: Represents an individual AI-generated comment or issue found during a `ReviewIteration`. Each `Review` is associated with a specific `ReviewIteration` and contains details such as the file name, the line number, the comment itself, and a derived severity score.
+-   **`Review`**: Represents an individual AI-generated comment or issue found during a `ReviewIteration`. Each `Review` is associated with a specific `ReviewIteration` and contains details such as the file name, the line number, the comment itself, and a derived severity score. This `derivedSeverityScore` reflects the severity of that *specific* individual issue.
+-   **`ReviewIteration`**: Represents a single, complete run of the AI code review process for a specific pull request. Each `ReviewIteration` is uniquely identified by the pull request ID and the commit SHA it was run against. It acts as a container for all individual review comments generated during that particular analysis. The `derivedSeverityScore` for a `ReviewIteration` is the *highest* severity score among all the `Review` objects associated with that iteration, effectively representing the most critical issue found in that review run.
 
 Essentially, one `ReviewIteration` can contain multiple `Review` objects, providing a historical record of all AI feedback for each analysis run on a pull request.
 
