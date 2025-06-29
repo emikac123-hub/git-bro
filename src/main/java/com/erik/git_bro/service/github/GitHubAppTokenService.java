@@ -1,9 +1,5 @@
 package com.erik.git_bro.service.github;
 
-import java.net.URI;
-import java.net.http.HttpClient;
-import java.net.http.HttpRequest;
-import java.net.http.HttpResponse;
 import java.security.KeyFactory;
 import java.security.interfaces.RSAPrivateKey;
 import java.security.interfaces.RSAPublicKey;
@@ -19,7 +15,7 @@ import org.springframework.security.oauth2.jwt.JwtEncoderParameters;
 import org.springframework.security.oauth2.jwt.NimbusJwtEncoder;
 import org.springframework.stereotype.Service;
 
-import com.erik.git_bro.util.API;
+import com.erik.git_bro.util.ApiUrlProvider;
 import com.erik.git_bro.util.GitHubRequestUtil;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -40,10 +36,11 @@ import okhttp3.Response;
 @Slf4j
 public class GitHubAppTokenService {
 
+    private final ApiUrlProvider apiUrlProvider;
     // got that here: https://github.com/settings/installations/71819645
-    private final String INSTALLATION_ID = "71819645"; // TODO - Remove becuase this is my personal installation ID used
-                                                       // for testing.
-    private ObjectMapper objectMapper = new ObjectMapper();
+    private final long INSTALLATION_ID = 71819645L; // TODO - Remove becuase this is my personal installation ID used
+                                                    // for testing.
+    private final ObjectMapper objectMapper = new ObjectMapper();
 
     @Value("${github.app.id}")
     private String appId;
@@ -149,12 +146,11 @@ public class GitHubAppTokenService {
 
     public String getInstallationToken() throws Exception {
         final String githubToken = createJwtToken();
-        final String url = API.GIT_HUB_INSTALLATION_ID(INSTALLATION_ID);
-
+        final String installationUrl = this.apiUrlProvider.getInstallationTokenUrl(INSTALLATION_ID);
         OkHttpClient client = new OkHttpClient();
 
         Request request = GitHubRequestUtil.withGitHubHeaders(
-                new Request.Builder().url(url), githubToken)
+                new Request.Builder().url(installationUrl), githubToken)
                 .post(RequestBody.create(new byte[0])) // POST with no body
                 .build();
 
@@ -170,50 +166,50 @@ public class GitHubAppTokenService {
         }
     }
 
-    /**
-     * Exchange the app JWT for an installation access token
-     * 
-     * @throws Exception
-     */
     public String getInstallationId(final String owner, final String repo) throws Exception {
-        final String jwt = createJwtToken();
+        final String githubToken = createJwtToken();
+        final String appInstallationUrl = this.apiUrlProvider.getInstallationIdUrl(owner, repo);
 
-        final HttpClient client = HttpClient.newHttpClient();
-        final HttpRequest request = HttpRequest.newBuilder()
-                .uri(URI.create("https://api.github.com/repos/" + owner + "/" + repo + "/installation"))
-                .header("Authorization", "Bearer " + jwt)
-                .header("Accept", "application/vnd.github+json")
-                .GET()
+        OkHttpClient client = new OkHttpClient();
+
+        Request request = GitHubRequestUtil.withGitHubHeaders(
+                new Request.Builder().url(appInstallationUrl), githubToken)
+                .get()
                 .build();
-        final HttpResponse<String> response = client.send(request, HttpResponse.BodyHandlers.ofString());
-        if (response.statusCode() != 200) {
-            throw new RuntimeException("Failed to get the installation ID: " + response.body());
 
+        try (Response response = client.newCall(request).execute()) {
+            if (!response.isSuccessful()) {
+                throw new RuntimeException("Failed to get the installation ID: " +
+                        (response.body() != null ? response.body().string() : "unknown error"));
+            }
+
+            String responseBody = response.body().string();
+            JsonNode jsonNode = objectMapper.readTree(responseBody);
+            return jsonNode.get("id").asText();
         }
-        final JsonNode jsonNode = objectMapper.readTree(response.body());
-        return jsonNode.get("id").asText();
     }
 
     public String getInstallationToken(final long installationId) throws Exception {
-        final String jwt = createJwtToken();
+        final String githubToken = createJwtToken();
+        final String installationUrl = apiUrlProvider.getInstallationTokenUrl(installationId);
 
-        final HttpClient client = HttpClient.newHttpClient();
+        OkHttpClient client = new OkHttpClient();
 
-        final HttpRequest request = HttpRequest.newBuilder()
-                .uri(URI.create("https://api.github.com/app/installations/" + installationId + "/access_tokens"))
-                .header("Authorization", "Bearer " + jwt)
-                .header("Accept", "application/vnd.github+json")
-                .POST(HttpRequest.BodyPublishers.noBody())
+        Request request = GitHubRequestUtil.withGitHubHeaders(
+                new Request.Builder().url(installationUrl), githubToken)
+                .post(RequestBody.create(new byte[0])) // empty POST body
                 .build();
 
-        final HttpResponse<String> response = client.send(request, HttpResponse.BodyHandlers.ofString());
+        try (Response response = client.newCall(request).execute()) {
+            if (!response.isSuccessful()) {
+                String error = response.body() != null ? response.body().string() : "unknown error";
+                throw new RuntimeException("Failed to get installation token: " + error);
+            }
 
-        if (response.statusCode() != 201) {
-            throw new RuntimeException("Failed to get installation token: " + response.body());
+            String responseBody = response.body().string();
+            JsonNode jsonNode = objectMapper.readTree(responseBody);
+            return jsonNode.get("token").asText();
         }
-
-        final JsonNode jsonNode = objectMapper.readTree(response.body());
-        return jsonNode.get("token").asText();
     }
 
 }
