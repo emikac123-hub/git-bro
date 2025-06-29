@@ -56,7 +56,7 @@ public class CodeReviewController {
             @RequestParam() int pullNumber,
             @RequestParam() String prUrl,
             @RequestParam() String prAuthor,
-            @RequestParam() String modelName) throws IOException {
+            @RequestParam() String modelName) {
         try {
             String diff = new String(file.getBytes(), StandardCharsets.UTF_8);
             String sha = gitHubAppService.getSha(owner, repo, pullNumber);
@@ -70,8 +70,15 @@ public class CodeReviewController {
                     prAuthor);
 
             return this.codeAnalysisService.analyzeDiff(request, modelName)
-                    .handle((inlineReviewResponse, throwable) -> processAnalysisResult(inlineReviewResponse, throwable,
-                            owner, repo, pullNumber, sha));
+                    .handle((inlineReviewResponse, throwable) -> {
+                        try {
+                            return processAnalysisResult(inlineReviewResponse, throwable, owner, repo, pullNumber, sha);
+                        } catch (Exception e) {
+                            log.error("Error during analysis result processing", e);
+                            return ResponseEntity.status(500).body("Unexpected error: " + e.getMessage());
+                        }
+                    });
+
         } catch (Exception e) {
             log.error("Failed to get SHA or prepare analysis request", e);
             return CompletableFuture
@@ -80,7 +87,7 @@ public class CodeReviewController {
     }
 
     private ResponseEntity<?> processAnalysisResult(Object inlineReviewResponseObj, Throwable throwable, String owner,
-            String repo, int pullNumber, String sha) {
+            String repo, int pullNumber, String sha) throws Exception {
         if (throwable != null) {
             return this.showResponse((String) null, throwable, "Failure to analyze code by line.");
         }
@@ -104,9 +111,15 @@ public class CodeReviewController {
 
             return ResponseEntity.ok().body(markdownSummary.toString().trim());
 
-        } catch (Exception e) {
-            log.error("Failed to parse or post inline comments", e);
-            return ResponseEntity.status(500).body("Failed to post inline comments: " + e.getMessage());
+        } catch (IOException e) {
+            if (e.getMessage() != null && e.getMessage().contains("422")) {
+                // Log the error but don't throw it, so processing continues
+                log.warn("Skipping invalid comment due to GitHub 422 error: {}", e.getMessage());
+                return ResponseEntity.noContent().build();
+            } else {
+                // For other exceptions, you might want to rethrow or handle differently
+                throw e;
+            }
         }
     }
 

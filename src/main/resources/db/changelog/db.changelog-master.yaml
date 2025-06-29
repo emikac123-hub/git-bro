@@ -52,7 +52,7 @@ databaseChangeLog:
                   name: comment_summary
                   type: TEXT
               - column:
-                  name: severity_score
+                  name: derived_severity_score
                   type: VARCHAR(255)
 
   - changeSet:
@@ -107,7 +107,7 @@ databaseChangeLog:
                   type: BOOLEAN
                   defaultValueBoolean: false
               - column:
-                  name: derived_severity_score
+                  name: severity_score
                   type: DECIMAL(3,2)
               - column:
                   name: category
