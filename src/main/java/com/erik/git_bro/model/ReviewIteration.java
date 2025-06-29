@@ -1,5 +1,6 @@
 package com.erik.git_bro.model;
 
+import java.math.BigDecimal;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
@@ -41,6 +42,15 @@ public class ReviewIteration {
     // The timestamp of the push/analysis
     @Column(nullable = false)
     private Instant pushAt;
+
+    @Column(nullable = false)
+    private String severityScore;
+
+    @Column(nullable = false)
+    private String aiModel;
+
+    @Column(columnDefinition = "TEXT")
+    private String commentSummary;
 
     // Each iteration can have multiple review comments.
     // 'mappedBy' indicates that the Review entity owns the relationship.

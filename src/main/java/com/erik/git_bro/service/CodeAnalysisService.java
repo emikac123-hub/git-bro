@@ -41,9 +41,7 @@ public class CodeAnalysisService {
     @Transactional
     public CompletableFuture<InlineReviewResponse> analyzeDiff(AnalysisRequest request, String modelName) {
 
-        // Find or create the iteration for this commit
-        ReviewIteration iteration = reviewIterationService.findOrCreateIteration(request.pullRequestId(),
-                request.sha());
+
 
         CompletableFuture<String> feedbackFuture;
         if ("chatgpt".equalsIgnoreCase(modelName)) {
@@ -57,6 +55,11 @@ public class CodeAnalysisService {
             future.completeExceptionally(new IllegalArgumentException("Unsupported AI model: " + modelName));
             return future;
         }
+        // Find or create the iteration for this commit
+    
+        // Find or create the iteration for this commit
+        ReviewIteration iteration = reviewIterationService.findOrCreateIteration(request.pullRequestId(),
+                request.sha());
 
         return feedbackFuture
                 .thenApplyAsync(rawFeedback -> {
@@ -69,10 +72,13 @@ public class CodeAnalysisService {
                             log.error("Parsed inlineReviewResponse is null for feedback: {}", cleanFeedback);
                             throw new RuntimeException("Failed to parse AI feedback: inlineReviewResponse is null");
                         }
-
+                        BigDecimal reviewIterationSeverity = BigDecimal.ZERO;
                         for (Issue aiIssue : inlineReviewResponse.getIssues()) {
                             Category issueCategory = this.parsingService.getIssueCategory(aiIssue.getComment());
                             BigDecimal severity = determineSeverity(issueCategory);
+                            if (severity.compareTo(reviewIterationSeverity) > 0) {
+                                reviewIterationSeverity = severity;
+                            }
                             Integer lineNumber = aiIssue.getLine(); // AI should provide line number
 
                             String fingerprint = createFingerprint(
@@ -103,6 +109,9 @@ public class CodeAnalysisService {
                                 log.info("Duplicate feedback detected and skipped for file: {}", aiIssue.getFile());
                             }
                         }
+                        iteration.setSeverityScore(reviewIterationSeverity.toString());
+                        iteration.setAiModel(modelName);
+                        reviewIterationService.save(iteration);
                         return inlineReviewResponse; // Return the parsed response
                     } catch (JsonProcessingException e) {
                         log.error("Error parsing AI feedback: {}", rawFeedback, e);
