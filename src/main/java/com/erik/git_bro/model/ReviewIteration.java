@@ -46,7 +46,7 @@ public class ReviewIteration {
     @Column(nullable = false)
     private String severityScore;
 
-    @Column(nullable = false)
+    @Column
     private String aiModel;
 
     @Column(columnDefinition = "TEXT")
