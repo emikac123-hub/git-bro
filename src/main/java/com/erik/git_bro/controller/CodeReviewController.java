@@ -56,7 +56,7 @@ public class CodeReviewController {
             @RequestParam() int pullNumber,
             @RequestParam() String prUrl,
             @RequestParam() String prAuthor,
-            @RequestParam() String modelName) throws IOException {
+            @RequestParam() String modelName) {
         try {
             String diff = new String(file.getBytes(), StandardCharsets.UTF_8);
             String sha = gitHubAppService.getSha(owner, repo, pullNumber);
@@ -70,8 +70,15 @@ public class CodeReviewController {
                     prAuthor);
 
             return this.codeAnalysisService.analyzeDiff(request, modelName)
-                    .handle((inlineReviewResponse, throwable) -> processAnalysisResult(inlineReviewResponse, throwable,
-                            owner, repo, pullNumber, sha));
+                    .handle((inlineReviewResponse, throwable) -> {
+                        try {
+                            return processAnalysisResult(inlineReviewResponse, throwable, owner, repo, pullNumber, sha);
+                        } catch (Exception e) {
+                            log.error("Error during analysis result processing", e);
+                            return ResponseEntity.status(500).body("Unexpected error: " + e.getMessage());
+                        }
+                    });
+
         } catch (Exception e) {
             log.error("Failed to get SHA or prepare analysis request", e);
             return CompletableFuture
