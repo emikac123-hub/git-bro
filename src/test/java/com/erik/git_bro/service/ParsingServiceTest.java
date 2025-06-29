@@ -1,11 +1,15 @@
 package com.erik.git_bro.service;
 
 import java.util.List;
+import java.util.stream.Stream;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.Arguments;
+import org.junit.jupiter.params.provider.MethodSource;
 
 class ParsingServiceTest {
 
@@ -133,6 +137,72 @@ class ParsingServiceTest {
 
         assertEquals("Malformed JSON", result);
         assertTrue(parsingService.isMalformedJson(result));
+    }
+
+    @ParameterizedTest
+    @MethodSource("providePatches")
+    void testCalculatePositionInDiffHunk(String patch, int absoluteLineNumber, Integer expectedPosition) {
+        Integer result = parsingService.calculatePositionInDiffHunk(patch, absoluteLineNumber);
+        assertEquals(expectedPosition, result);
+    }
+
+    private static Stream<Arguments> providePatches() {
+        return Stream.of(
+                Arguments.of(
+                        // Simple added line
+                        """
+                                @@ -1,2 +1,3 @@
+                                 unchanged line
+                                +added line
+                                 another unchanged
+                                """,
+                        2, // Absolute line number in new file
+                        1 // Position in hunk (0-based)
+                ),
+                Arguments.of(
+                        // Added in middle
+                        """
+                                @@ -2,3 +2,4 @@
+                                 line1
+                                 line2
+                                +added line
+                                 line3
+                                """,
+                        4,
+                        2),
+                Arguments.of(
+                        // Skipped line not in diff
+                        """
+                                @@ -10,3 +10,3 @@
+                                 line1
+                                +new line
+                                 line2
+                                """,
+                        13,
+                        null // line 13 is not in the diff (patch ends at line 12)
+                ),
+                Arguments.of(
+                        // Deleted line, should not return position
+                        """
+                                @@ -1,3 +1,2 @@
+                                 line1
+                                -line2
+                                 line3
+                                """,
+                        2,
+                        null),
+                Arguments.of(
+                        // Multiple hunks, correct hunk selected
+                        """
+                                @@ -1,2 +1,2 @@
+                                 a
+                                +b
+                                @@ -10,2 +10,2 @@
+                                 x
+                                +y
+                                """,
+                        11,
+                        1));
     }
 
 }

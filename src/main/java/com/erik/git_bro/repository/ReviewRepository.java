@@ -1,11 +1,14 @@
 package com.erik.git_bro.repository;
 
-import com.erik.git_bro.model.Review;
+import java.util.UUID;
+
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
 
+import com.erik.git_bro.model.Review;
+
 @Repository
-public interface ReviewRepository extends JpaRepository<Review, Long> {
+public interface ReviewRepository extends JpaRepository<Review, UUID> {
 
     /**
      * Checks if a Review entity with the given fingerprint already exists for a specific pull request.
@@ -15,4 +18,6 @@ public interface ReviewRepository extends JpaRepository<Review, Long> {
      * @return true if a matching review exists, false otherwise
      */
     boolean existsByPullRequestIdAndFeedbackFingerprint(String pullRequestId, String feedbackFingerprint);
+
+    boolean existsByPullRequestId(String pullRequestId);
 }

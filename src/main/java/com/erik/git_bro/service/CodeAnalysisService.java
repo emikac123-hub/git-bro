@@ -32,7 +32,7 @@ public class CodeAnalysisService {
 
     private final ChatGPTClient chatGPTClient;
     private final GeminiClient geminiClient;
-    
+
     private final ReviewRepository reviewRepository;
     private final ReviewIterationService reviewIterationService;
     private final ParsingService parsingService;
@@ -47,9 +47,11 @@ public class CodeAnalysisService {
 
         CompletableFuture<String> feedbackFuture;
         if ("chatgpt".equalsIgnoreCase(modelName)) {
-             feedbackFuture = (CompletableFuture<String>) chatGPTClient.analyzeFileLineByLine(request.filename(), request.diffContent());
+            feedbackFuture = (CompletableFuture<String>) chatGPTClient.analyzeFileLineByLine(request.filename(),
+                    request.diffContent());
         } else if ("gemini".equalsIgnoreCase(modelName)) {
-            feedbackFuture = (CompletableFuture<String>) geminiClient.analyzeFileLineByLine(request.filename(), request.diffContent());
+            feedbackFuture = (CompletableFuture<String>) geminiClient.analyzeFileLineByLine(request.filename(),
+                    request.diffContent());
         } else {
             CompletableFuture<InlineReviewResponse> future = new CompletableFuture<>();
             future.completeExceptionally(new IllegalArgumentException("Unsupported AI model: " + modelName));
@@ -60,18 +62,26 @@ public class CodeAnalysisService {
                 .thenApplyAsync(rawFeedback -> {
                     try {
                         String cleanFeedback = parsingService.cleanChunk(rawFeedback);
-                        InlineReviewResponse inlineReviewResponse = objectMapper.readValue(cleanFeedback, InlineReviewResponse.class);
+                        InlineReviewResponse inlineReviewResponse = objectMapper.readValue(cleanFeedback,
+                                InlineReviewResponse.class);
+
+                        if (inlineReviewResponse == null) {
+                            log.error("Parsed inlineReviewResponse is null for feedback: {}", cleanFeedback);
+                            throw new RuntimeException("Failed to parse AI feedback: inlineReviewResponse is null");
+                        }
 
                         for (Issue aiIssue : inlineReviewResponse.getIssues()) {
-                            Category issueCategory = getIssueCategory(aiIssue.getComment());
+                            Category issueCategory = this.parsingService.getIssueCategory(aiIssue.getComment());
                             BigDecimal severity = determineSeverity(issueCategory);
                             Integer lineNumber = aiIssue.getLine(); // AI should provide line number
 
                             String fingerprint = createFingerprint(
-                                    request.pullRequestId(), aiIssue.getFile(), aiIssue.getComment(), issueCategory.name());
-
+                                    request.pullRequestId(), aiIssue.getFile(), aiIssue.getComment(),
+                                    issueCategory.name());
+               
                             // Check if this exact feedback already exists for this PR
-                            if (!reviewRepository.existsByPullRequestIdAndFeedbackFingerprint(request.pullRequestId(), fingerprint)) {
+                            if (!reviewRepository.existsByPullRequestIdAndFeedbackFingerprint(request.pullRequestId(),
+                                    fingerprint)) {
                                 Review review = Review.builder()
                                         .pullRequestId(request.pullRequestId())
                                         .fileName(aiIssue.getFile())
@@ -121,20 +131,6 @@ public class CodeAnalysisService {
         }
     }
 
-    private Category getIssueCategory(String feedback) {
-        if (feedback == null || feedback.isBlank()) {
-            return Category.NO_FEEDBACK;
-        }
-        feedback = feedback.toLowerCase();
-        if (feedback.contains("null pointer") || feedback.contains("security")) {
-            return Category.SECURITY;
-        } else if (feedback.contains("performance") || feedback.contains("race condition")) {
-            return Category.PERFORMANCE;
-        } else if (feedback.contains("naming") || feedback.contains("style")) {
-            return Category.STYLE;
-        }
-        return Category.GENERAL;
-    }
 
     private BigDecimal determineSeverity(Category category) {
         return switch (category) {

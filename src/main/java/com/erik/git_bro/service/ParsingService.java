@@ -11,6 +11,7 @@ import java.util.stream.Collectors;
 
 import org.springframework.stereotype.Service;
 
+import com.erik.git_bro.model.Category;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
@@ -222,44 +223,66 @@ public class ParsingService {
                     newLineNum = Integer.parseInt(matcher.group(1)) - 1;
                 }
             } else if (line.startsWith("+") && !line.startsWith("+++")) {
+                // Added line: increment and add
                 commentableLines.add(++newLineNum);
-            } else if (!line.startsWith("-")) {
-                newLineNum++;
+            } else if (line.startsWith(" ")) {
+                // Unchanged line: increment and add
+                commentableLines.add(++newLineNum);
+            } else if (line.startsWith("-")) {
+                // Deleted line: do NOT increment newLineNum, do nothing
+            } else {
+                // Any other lines, like metadata, might be safe to ignore or increment
+                // cautiously
+                // But typically these won't occur here; you might log or ignore
             }
         }
 
         return commentableLines;
     }
 
-    public Integer calculatePositionInDiffHunk(String patch, int absoluteLineNumber) {
+    public Integer calculatePositionInDiffHunk(String patch, int targetLine) {
         String[] lines = patch.split("\n");
-        int currentAbsoluteLine = -1;
-        int position = -1;
+        int position = -1; // position in patch (to be returned)
+        int currentNewLine = -1; // tracks new file line number currently processed
 
-        for (int i = 0; i < lines.length; i++) {
-            String line = lines[i];
+        // The patch may contain multiple hunks, each starting with @@ line
+        for (String line : lines) {
             if (line.startsWith("@@")) {
-                Matcher matcher = Pattern.compile("\\+([0-9]+)").matcher(line);
+                // Extract starting line number of new file from hunk header
+                Matcher matcher = Pattern.compile("\\+(\\d+)").matcher(line);
                 if (matcher.find()) {
-                    currentAbsoluteLine = Integer.parseInt(matcher.group(1));
+                    currentNewLine = Integer.parseInt(matcher.group(1)) - 1; // -1 because we'll increment before
+                                                                             // checking line
+                    position = -1; // reset position for new hunk
                 }
-                position = -1; // Reset position for new hunk
-            } else if (line.startsWith("+")) {
-                position++;
-                if (currentAbsoluteLine == absoluteLineNumber) {
-                    return position;
+            } else {
+                position++; // increment position for every line in patch except hunk header
+                char prefix = line.charAt(0);
+
+                switch (prefix) {
+                    case '+' -> {
+                        currentNewLine++; // added line in new file
+                        if (currentNewLine == targetLine) {
+                            return position;
+                        }
+                    }
+                    case ' ' -> {
+                        currentNewLine++; // unchanged line in new file
+                        if (currentNewLine == targetLine) {
+                            return position;
+                        }
+                    }
+                    case '-' -> {
+                    }
+                    default -> {
+                    }
                 }
-                currentAbsoluteLine++;
-            } else if (line.startsWith(" ")) {
-                position++;
-                currentAbsoluteLine++;
-            } else if (line.startsWith("-")) {
-                // Decrement currentAbsoluteLine for removed lines, but don't increment position
-                // as they are not part of the new file
-                currentAbsoluteLine++;
+                // deleted line in old file; does not affect new file line count
+                // position still increments because it is in the patch,
+                // but we do NOT increment currentNewLine here
             }
         }
-        return null; // Line not found in diff hunk
+        return null; // target line not found in patch
     }
 
     public Integer extractLineNumberFromFeedback(String feedback) {
@@ -270,4 +293,79 @@ public class ParsingService {
         }
         return null; // Or throw an exception, depending on desired behavior
     }
+
+    public String extractDiffHunkForLine(String patch, int targetLine) {
+        String[] lines = patch.split("\n");
+        StringBuilder hunkBuilder = new StringBuilder();
+
+        boolean insideHunk = false;
+        int hunkStartLine = -1;
+        int hunkNewLineStart = -1;
+        int hunkNewLineCount = -1;
+        int currentNewLine = -1;
+
+        for (int i = 0; i < lines.length; i++) {
+            String line = lines[i];
+            if (line.startsWith("@@")) {
+                // If we were inside a hunk but didn't find the target line, reset builder
+                if (insideHunk) {
+                    // We reached new hunk header, so stop
+                    break;
+                }
+                insideHunk = true;
+                hunkBuilder.setLength(0); // reset builder
+                hunkBuilder.append(line).append("\n");
+
+                // Parse new file start line and count from hunk header
+                Matcher matcher = Pattern.compile("\\+(\\d+),(\\d+)").matcher(line);
+                if (matcher.find()) {
+                    hunkNewLineStart = Integer.parseInt(matcher.group(1));
+                    hunkNewLineCount = Integer.parseInt(matcher.group(2));
+                    currentNewLine = hunkNewLineStart - 1; // minus 1 because we increment before line check
+                } else {
+                    // If count missing, fallback to 1
+                    matcher = Pattern.compile("\\+(\\d+)").matcher(line);
+                    if (matcher.find()) {
+                        hunkNewLineStart = Integer.parseInt(matcher.group(1));
+                        hunkNewLineCount = 1;
+                        currentNewLine = hunkNewLineStart - 1;
+                    }
+                }
+            } else if (insideHunk) {
+                hunkBuilder.append(line).append("\n");
+                char prefix = line.charAt(0);
+
+                if (prefix == '+' || prefix == ' ') {
+                    currentNewLine++;
+                    if (currentNewLine == targetLine) {
+                        // This hunk contains the target line, so continue collecting lines
+                        // We keep appending until next hunk or end of patch
+                    }
+                }
+                // If the line is '-', do not increment currentNewLine, but append line
+
+                // Important: To detect if the hunk contains the target line,
+                // we keep insideHunk true. If after all lines in patch no new hunk header,
+                // it means this is the correct hunk.
+            }
+        }
+
+        return insideHunk ? hunkBuilder.toString().trim() : null;
+    }
+
+    public Category getIssueCategory(String feedback) {
+        if (feedback == null || feedback.isBlank()) {
+            return Category.NO_FEEDBACK;
+        }
+        feedback = feedback.toLowerCase();
+        if (feedback.contains("null pointer") || feedback.contains("security")) {
+            return Category.SECURITY;
+        } else if (feedback.contains("performance") || feedback.contains("race condition")) {
+            return Category.PERFORMANCE;
+        } else if (feedback.contains("naming") || feedback.contains("style")) {
+            return Category.STYLE;
+        }
+        return Category.GENERAL;
+    }
+
 }
