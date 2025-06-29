@@ -43,8 +43,8 @@ public class ReviewIteration {
     @Column(nullable = false)
     private Instant pushAt;
 
-    @Column(nullable = false)
-    private String severityScore;
+    @Column(precision = 3, scale = 2)
+    private BigDecimal derivedSeverityScore;
 
     @Column
     private String aiModel;
