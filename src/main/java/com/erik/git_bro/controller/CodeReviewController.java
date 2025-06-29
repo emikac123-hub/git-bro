@@ -115,7 +115,7 @@ public class CodeReviewController {
             if (e.getMessage() != null && e.getMessage().contains("422")) {
                 // Log the error but don't throw it, so processing continues
                 log.warn("Skipping invalid comment due to GitHub 422 error: {}", e.getMessage());
-                return ResponseEntity.ok("Some comments could not be posted due to GitHub validation rules.");
+                return ResponseEntity.noContent().build();
             } else {
                 // For other exceptions, you might want to rethrow or handle differently
                 throw e;
