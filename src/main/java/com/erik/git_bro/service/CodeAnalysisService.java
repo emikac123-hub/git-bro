@@ -186,7 +186,7 @@ public class CodeAnalysisService {
                 .feedback(aiIssue.getComment())
                 .category(category)
                 .feedbackFingerprint(fingerprint)
-                .derivedSeverityScore(severity)
+                .severityScore(severity)
                 .userId(request.author())
                 .prUrl(request.prUrl())
                 .createdAt(Instant.now())

@@ -62,7 +62,7 @@ public class Review {
     private Boolean issueFlag;
 
     @Column(precision = 3, scale = 2)
-    private BigDecimal derivedSeverityScore;
+    private BigDecimal severityScore;
 
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)

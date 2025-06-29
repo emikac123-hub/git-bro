@@ -35,7 +35,7 @@ public class TestController {
                             // .aiModel(review.setAiModel(aiModelRepository.findById(aiModelId).orElseThrow(()
                             // -> log.err));)
                             .feedback((String) "Good Job")
-                            .derivedSeverityScore(score)
+                            .severityScore(score)
                             .build();
                     reviewRepository.save(review);
         
