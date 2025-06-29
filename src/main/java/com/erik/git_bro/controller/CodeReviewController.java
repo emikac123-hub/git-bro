@@ -180,8 +180,8 @@ public class CodeReviewController {
             markdownSummary
                     .append("- **File**: `").append(issue.getFile()).append("`\n")
                     .append("  - **Line**: ").append(issue.getLine()).append("\n")
-                    .append("  - **Comment**: ").append(issue.getComment().replaceAll("\n", " ").trim())
-                    .append("  - **Caegory**: ")
+                    .append("  - **Comment**: ").append(issue.getComment().replaceAll("\n", " ").trim()).append("\n")
+                    .append("  - **Category**: ")
                     .append(this.parsingService.getIssueCategory(issue.getComment()).name().replaceAll("\n", " ")
                             .trim())
                     .append("\n\n");
