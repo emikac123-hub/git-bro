@@ -73,8 +73,7 @@ public class CodeAnalysisService {
                             String fingerprint = createFingerprint(
                                     request.pullRequestId(), aiIssue.getFile(), aiIssue.getComment(),
                                     issueCategory.name());
-         
-
+               
                             // Check if this exact feedback already exists for this PR
                             if (!reviewRepository.existsByPullRequestIdAndFeedbackFingerprint(request.pullRequestId(),
                                     fingerprint)) {
