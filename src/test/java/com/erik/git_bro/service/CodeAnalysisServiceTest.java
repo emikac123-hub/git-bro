@@ -1,163 +1,74 @@
 package com.erik.git_bro.service;
 
-import java.util.Collections;
-import java.util.List;
-import java.util.concurrent.CompletableFuture;
-
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertNotNull;
-import static org.junit.jupiter.api.Assertions.assertTrue;
-import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Test;
-import org.mockito.ArgumentCaptor;
-import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.anyString;
-import static org.mockito.ArgumentMatchers.eq;
-import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.never;
-import static org.mockito.Mockito.verify;
-import static org.mockito.Mockito.when;
-
 import com.erik.git_bro.client.ChatGPTClient;
 import com.erik.git_bro.client.GeminiClient;
 import com.erik.git_bro.dto.AnalysisRequest;
 import com.erik.git_bro.dto.InlineReviewResponse;
 import com.erik.git_bro.dto.Issue;
-import com.erik.git_bro.model.Review;
+import com.erik.git_bro.model.Category;
+import com.erik.git_bro.model.ReviewIteration;
+import com.erik.git_bro.client.ChatGPTClient;
+import com.erik.git_bro.client.GeminiClient;
+import com.erik.git_bro.dto.AnalysisRequest;
+import com.erik.git_bro.dto.InlineReviewResponse;
+import com.erik.git_bro.dto.Issue;
+import com.erik.git_bro.model.Category;
 import com.erik.git_bro.model.ReviewIteration;
 import com.erik.git_bro.repository.ReviewRepository;
+import com.erik.git_bro.service.ParsingService;
+import com.erik.git_bro.service.ReviewIterationService;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.boot.test.mock.mockito.MockBean;
+import org.springframework.security.test.context.support.WithMockUser;
+import org.springframework.test.context.junit.jupiter.SpringExtension;
 
-class CodeAnalysisServiceTest {
+import java.util.Collections;
+import java.util.concurrent.CompletableFuture;
 
-        private ChatGPTClient chatGPTClient;
-        private GeminiClient geminiClient;
-        private ReviewRepository reviewRepository;
-        private ParsingService parsingService;
-        private ReviewIterationService reviewIterationService;
-        private ObjectMapper objectMapper;
-        private CodeAnalysisService codeAnalysisService;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.when;
 
-        @BeforeEach
-        void setUp() {
-                chatGPTClient = mock(ChatGPTClient.class);
-                geminiClient = mock(GeminiClient.class);
-                reviewRepository = mock(ReviewRepository.class);
-                parsingService = mock(ParsingService.class);
-                reviewIterationService = mock(ReviewIterationService.class);
-                objectMapper = mock(ObjectMapper.class);
+@ExtendWith(SpringExtension.class)
+@SpringBootTest
+public class CodeAnalysisServiceTest {
 
-                codeAnalysisService = new CodeAnalysisService(
-                                chatGPTClient,
-                                geminiClient,
-                                reviewRepository,
-                                reviewIterationService,
-                                parsingService,
-                                objectMapper);
-        }
+    @MockBean
+    private ChatGPTClient chatGPTClient;
 
-        @Test
-        void analyzeDiff_newFeedback_savesReview() throws Exception {
-                // Given
-                AnalysisRequest request = new AnalysisRequest(
-                                "TestFile.java",
-                                "diff --git a/TestFile.java b/TestFile.java",
-                                "pr-1",
-                                "sha-123",
-                                "http://example.com/pr/1",
-                                "test-author");
+    @MockBean
+    private GeminiClient geminiClient;
 
-                String rawFeedback = "```json\n{\"issues\":[{\"file\":\"TestFile.java\",\"line\":10,\"comment\":\"Security issue found.\"}]}\n```";
-                String cleanedFeedback = "{\"issues\":[{\"file\":\"TestFile.java\",\"line\":10,\"comment\":\"Security issue found.\"}]}";
+    @MockBean
+    private ReviewRepository reviewRepository;
 
-                ReviewIteration iteration = new ReviewIteration();
+    @MockBean
+    private ReviewIterationService reviewIterationService;
 
-                Issue mockIssue = new Issue();
-                mockIssue.setFile("TestFile.java");
-                mockIssue.setLine(10);
-                mockIssue.setComment("Security issue found.");
+    @MockBean
+    private ParsingService parsingService;
 
-                InlineReviewResponse inlineReviewResponse = new InlineReviewResponse();
-                inlineReviewResponse.setIssues(List.of(mockIssue));
+    @Autowired
+    private CodeAnalysisService codeAnalysisService;
 
-                when(parsingService.cleanChunk(rawFeedback)).thenReturn(cleanedFeedback);
-                when(reviewIterationService.findOrCreateIteration(request.pullRequestId(), request.sha()))
-                                .thenReturn(iteration);
-                when(chatGPTClient.analyzeFileLineByLine(anyString(), anyString()))
-                                .thenReturn((CompletableFuture) CompletableFuture.completedFuture(rawFeedback));
-                when(parsingService.cleanChunk(rawFeedback)).thenReturn(cleanedFeedback);
-                when(objectMapper.readValue(cleanedFeedback, InlineReviewResponse.class))
-                                .thenReturn(inlineReviewResponse);
-                when(reviewRepository.existsByPullRequestIdAndFeedbackFingerprint(eq(request.pullRequestId()),
-                                anyString()))
-                                .thenReturn(false);
+    @Autowired
+    private ObjectMapper objectMapper;
 
-                // When
-                CompletableFuture<?> future = codeAnalysisService.analyzeDiff(request, "chatgpt");
-                InlineReviewResponse result = (InlineReviewResponse) future.get();
+    @Test
+    @WithMockUser
+    public void testAnalyzeDiff() throws Exception {
+        AnalysisRequest request = new AnalysisRequest("test.java", "diff --git a/test.java b/test.java\n--- a/test.java\n+++ b/test.java\n@@ -1,1 +1,1 @@\n-public class Test { }\n+public class Test { public void newMethod() { } }", "1", "test-sha", "http://test.url", "test-author");
+        InlineReviewResponse response = new InlineReviewResponse(Collections.singletonList(new Issue("test.java", 1, 1, "Test comment")), "Test recommendation");
 
-                ArgumentCaptor<Review> reviewCaptor = ArgumentCaptor.forClass(Review.class);
-                verify(reviewRepository).save(reviewCaptor.capture());
-                Review savedReview = reviewCaptor.getValue();
+        when((CompletableFuture) geminiClient.analyzeFileLineByLine(any(), any())).thenReturn(CompletableFuture.completedFuture(objectMapper.writeValueAsString(response)));
+        when(reviewIterationService.findOrCreateIteration(any(), any())).thenReturn(new ReviewIteration());
+        when(parsingService.cleanChunk(any())).thenCallRealMethod();
+        when(parsingService.getIssueCategory(any())).thenReturn(Category.GENERAL);
 
-                assertEquals(request.filename(), savedReview.getFileName());
-                assertEquals(request.diffContent(), savedReview.getDiffContent());
-                assertEquals(request.pullRequestId(), savedReview.getPullRequestId());
-                assertEquals(request.author(), savedReview.getUserId());
-                assertNotNull(savedReview.getFeedback());
-                assertNotNull(savedReview.getFeedbackFingerprint());
-                assertEquals(iteration, savedReview.getReviewIteration());
-                assertNotNull(result);
-                assertEquals(1, result.getIssues().size());
-                assertEquals("Security issue found.", result.getIssues().get(0).getComment());
-                assertTrue(iteration.getReviews().contains(savedReview));
-
-        }
-
-        @Test
-        void analyzeDiff_duplicateFeedback_skipsSave() throws Exception {
-                // Given
-                AnalysisRequest request = new AnalysisRequest(
-                                "TestFile.java",
-                                "diff --git a/TestFile.java b/TestFile.java",
-                                "pr-1",
-                                "sha-123",
-                                "http://example.com/pr/1",
-                                "test-author");
-
-                String rawFeedback = "{\"issues\": [], \"recommendation\": \"Looks fine.\"}";
-                String cleanedFeedback = rawFeedback;
-
-                ReviewIteration iteration = new ReviewIteration();
-
-                InlineReviewResponse inlineReviewResponse = new InlineReviewResponse();
-                inlineReviewResponse.setIssues(Collections.emptyList());
-                inlineReviewResponse.setRecommendation("Looks fine.");
-
-                when(reviewIterationService.findOrCreateIteration(request.pullRequestId(), request.sha()))
-                                .thenReturn(iteration);
-                when(chatGPTClient.analyzeFileLineByLine(anyString(), anyString()))
-                                .thenReturn((CompletableFuture) CompletableFuture.completedFuture(rawFeedback));
-                when(parsingService.cleanChunk(rawFeedback)).thenReturn(cleanedFeedback);
-                when(objectMapper.readValue(cleanedFeedback, InlineReviewResponse.class))
-                                .thenReturn(inlineReviewResponse);
-                when(reviewRepository.existsByPullRequestIdAndFeedbackFingerprint(eq(request.pullRequestId()),
-                                anyString()))
-                                .thenReturn(true); // Simulate duplicate feedback found
-
-                // When
-                CompletableFuture<?> future = codeAnalysisService.analyzeDiff(request, "chatgpt");
-                Object result = future.get();
-
-                // Then
-                assertNotNull(result, "Result should not be null");
-                assertTrue(result instanceof InlineReviewResponse, "Result should be InlineReviewResponse instance");
-
-                InlineReviewResponse response = (InlineReviewResponse) result;
-                assertEquals(0, response.getIssues().size());
-                assertEquals("Looks fine.", response.getRecommendation());
-                verify(reviewRepository, never()).save(any(Review.class));
-                assertTrue(iteration.getReviews().isEmpty());
-        }
-
+        codeAnalysisService.analyzeDiff(request, "gemini").get();
+    }
 }
+

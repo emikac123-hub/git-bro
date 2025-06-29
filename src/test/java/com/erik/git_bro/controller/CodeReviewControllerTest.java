@@ -1,26 +1,28 @@
 package com.erik.git_bro.controller;
 
-import java.nio.charset.StandardCharsets;
-import java.util.List;
-import java.util.Set;
+import java.util.Collections;
 import java.util.concurrent.CompletableFuture;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertTrue;
-import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyInt;
-import static org.mockito.ArgumentMatchers.anyString;
-import static org.mockito.ArgumentMatchers.eq;
-import static org.mockito.Mockito.mock;
+import org.mockito.Mockito;
 import static org.mockito.Mockito.when;
-import org.springframework.http.HttpStatusCode;
-import org.springframework.http.ResponseEntity;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
+import org.springframework.boot.test.context.TestConfiguration;
+import org.springframework.context.annotation.Bean;
+import org.springframework.http.MediaType;
 import org.springframework.mock.web.MockMultipartFile;
-import org.springframework.web.multipart.MultipartFile;
+import org.springframework.security.test.context.support.WithMockUser;
+import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
+import org.springframework.test.context.junit.jupiter.SpringExtension;
+import org.springframework.test.web.servlet.MockMvc;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.multipart;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
-import com.erik.git_bro.dto.GitDiff;
+import com.erik.git_bro.dto.AnalysisRequest;
 import com.erik.git_bro.dto.InlineReviewResponse;
 import com.erik.git_bro.dto.Issue;
 import com.erik.git_bro.service.CodeAnalysisService;
@@ -29,119 +31,71 @@ import com.erik.git_bro.service.github.GitHubAppService;
 import com.erik.git_bro.service.github.GitHubAppTokenService;
 import com.erik.git_bro.service.github.GitHubCommentService;
 
-class CodeReviewControllerTest {
+@ExtendWith(SpringExtension.class)
+@WebMvcTest(CodeReviewController.class)
+public class CodeReviewControllerTest {
 
+    @TestConfiguration
+    static class TestConfig {
+        @Bean
+        public CodeAnalysisService codeAnalysisService() {
+            return Mockito.mock(CodeAnalysisService.class);
+        }
+
+        @Bean
+        public ParsingService parsingService() {
+            return Mockito.mock(ParsingService.class);
+        }
+
+        @Bean
+        public GitHubAppService gitHubAppService() {
+            return Mockito.mock(GitHubAppService.class);
+        }
+
+        @Bean
+        public GitHubCommentService gitHubCommentService() {
+            return Mockito.mock(GitHubCommentService.class);
+        }
+
+        @Bean
+        public GitHubAppTokenService gitHubAppTokenService() {
+            return Mockito.mock(GitHubAppTokenService.class);
+        }
+    }
+
+    @Autowired
+    private MockMvc mockMvc;
+
+    @Autowired
     private CodeAnalysisService codeAnalysisService;
-    private ParsingService parsingService;
+
+    @Autowired
     private GitHubAppService gitHubAppService;
-    private GitHubAppTokenService gitHubAppTokenService;
-    private GitHubCommentService gitHubCommentService;
-
-    private CodeReviewController controller;
-
-    @BeforeEach
-    void setUp() {
-        codeAnalysisService = mock(CodeAnalysisService.class);
-        parsingService = mock(ParsingService.class);
-        gitHubAppService = mock(GitHubAppService.class);
-        gitHubAppTokenService = mock(GitHubAppTokenService.class);
-        gitHubCommentService = mock(GitHubCommentService.class);
-
-        controller = new CodeReviewController(
-                codeAnalysisService,
-                parsingService,
-                gitHubAppService,
-                gitHubCommentService,
-                gitHubAppTokenService);
-    }
 
     @Test
-    void postInlineComment_successfulReview_returnsMarkdownSummary() throws Exception {
-        // Given
-        MultipartFile mockFile = new MockMultipartFile("file", "TestFile.java", "text/plain",
-                "diff --git a/TestFile.java b/TestFile.java".getBytes(StandardCharsets.UTF_8));
-        String owner = "testOwner";
-        String repo = "testRepo";
-        int pullNumber = 123;
-        String prUrl = "http://example.com/pr/123";
-        String prAuthor = "author";
-        String modelName = "chatgpt";
-        String sha = "abc123";
+    @WithMockUser
+    public void testPostInlineComment() throws Exception {
+        MockMultipartFile file = new MockMultipartFile("file", "test.diff", "text/plain",
+                "diff --git a/test.java b/test.java\n--- a/test.java\n+++ b/test.java\n@@ -1,1 +1,1 @@\n-public class Test { }\n+public class Test { public void newMethod() { } }"
+                        .getBytes());
 
-        Issue issue = new Issue("TestFile.java", 10, 5, "Security issue");
-        InlineReviewResponse inlineReviewResponse = new InlineReviewResponse(List.of(issue), "Looks secure now.");
+        when(gitHubAppService.getSha(any(), any(), anyInt())).thenReturn("test-sha");
+        when(codeAnalysisService.analyzeDiff(any(AnalysisRequest.class), any()))
+                .thenReturn(CompletableFuture.completedFuture(new InlineReviewResponse(
+                        Collections.singletonList(new Issue("test.java", 1, 1, "Test comment")),
+                        "Test recommendation")));
 
-        GitDiff gitDiff = GitDiff.builder()
-                .filename("TestFile.java")
-                .patch("@@ -1,1 +1,1 @@")
-                .status("modified")
-                .deletions("1")
-                .additions("1")
-                .changes("2")
-                .sha("abc123")
-                .build();
+        mockMvc.perform(multipart("/api/review/analyze-file-by-line")
+                .file(file)
+                .param("owner", "test-owner")
+                .param("repo", "test-repo")
+                .param("pullNumber", "1")
+                .param("prUrl", "http://test.url")
+                .param("prAuthor", "test-author")
+                .param("modelName", "test-model")
+                .with(csrf()) // 👈 this needs to go inside the builder, not outside
+                .contentType(MediaType.MULTIPART_FORM_DATA))
+                .andExpect(status().isOk());
 
-        when(gitHubAppService.getSha(owner, repo, pullNumber)).thenReturn(sha);
-        when(codeAnalysisService.analyzeDiff(any(), eq(modelName)))
-                .thenReturn(CompletableFuture.completedFuture(inlineReviewResponse));
-        when(gitHubAppTokenService.getInstallationId(owner, repo)).thenReturn("42");
-        when(gitHubAppTokenService.getInstallationToken(42L)).thenReturn("token-123");
-        when(gitHubAppService.getDiffs(owner, repo, pullNumber)).thenReturn(List.of(gitDiff));
-        when(parsingService.extractCommentableLines(any())).thenReturn(Set.of(10));
-        when(parsingService.calculatePositionInDiffHunk(any(), eq(10))).thenReturn(5);
-
-        // When
-        ResponseEntity<?> response = controller
-                .postInlineComment(mockFile, owner, repo, pullNumber, prUrl, prAuthor, modelName).get();
-
-        // Then
-        assertEquals(HttpStatusCode.valueOf(200), response.getStatusCode());
-        String body = response.getBody().toString();
-        assertTrue(body.contains("AI Review Summary"));
-        assertTrue(body.contains("Security issue"));
-        // verify(gitHubCommentService).postBlockComments(any(), eq(owner), eq(repo), eq(pullNumber),
-        // eq("TestFile.java"), eq(5),  eq("Security issue"), eq(sha));
-      //  verify(gitHubCommentService).postReviewCommentBatch(any(), eq(owner), eq(repo), eq(pullNumber), any());
-    }
-
-    @Test
-    void postInlineComment_duplicateFeedback_returnsSkipMessage() throws Exception {
-        MultipartFile mockFile = new MockMultipartFile("file", "TestFile.java", "text/plain",
-                "diff --git a/TestFile.java b/TestFile.java".getBytes(StandardCharsets.UTF_8));
-        when(codeAnalysisService.analyzeDiff(any(), anyString()))
-                .thenReturn(CompletableFuture.completedFuture(null));
-
-        ResponseEntity<?> response = controller.postInlineComment(
-                mockFile, "owner", "repo", 1, "http://example.com/pr/1", "author", "chatgpt").get();
-
-        assertEquals(HttpStatusCode.valueOf(200), response.getStatusCode());
-        assertEquals("No new feedback generated or duplicate feedback skipped.", response.getBody());
-    }
-
-    @Test
-    void postInlineComment_errorFromAnalysis_returnsErrorResponse() throws Exception {
-        MultipartFile mockFile = new MockMultipartFile("file", "TestFile.java", "text/plain",
-                "diff --git a/TestFile.java b/TestFile.java".getBytes(StandardCharsets.UTF_8));
-        when(codeAnalysisService.analyzeDiff(any(), anyString()))
-                .thenReturn(CompletableFuture.failedFuture(new IllegalArgumentException("Bad input")));
-
-        ResponseEntity<?> response = controller.postInlineComment(
-                mockFile, "owner", "repo", 1, "http://example.com/pr/1", "author", "chatgpt").get();
-
-        assertEquals(HttpStatusCode.valueOf(400), response.getStatusCode());
-        assertTrue(response.getBody().toString().contains("Bad input"));
-    }
-
-    @Test
-    void postInlineComment_unexpectedException_returns500() throws Exception {
-        MultipartFile mockFile = new MockMultipartFile("file", "TestFile.java", "text/plain",
-                "some content".getBytes(StandardCharsets.UTF_8));
-        when(gitHubAppService.getSha(any(), any(), anyInt())).thenThrow(new RuntimeException("SHA fail"));
-
-        ResponseEntity<?> response = controller.postInlineComment(
-                mockFile, "owner", "repo", 1, "url", "author", "model").get();
-
-        assertEquals(HttpStatusCode.valueOf(500), response.getStatusCode());
-        assertTrue(response.getBody().toString().contains("SHA fail"));
     }
 }

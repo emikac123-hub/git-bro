@@ -109,7 +109,7 @@ public class CodeAnalysisService {
                                 log.info("Duplicate feedback detected and skipped for file: {}", aiIssue.getFile());
                             }
                         }
-                        iteration.setSeverityScore(reviewIterationSeverity.toString());
+                        iteration.setDerivedSeverityScore(reviewIterationSeverity);
                         iteration.setAiModel(modelName);
                         reviewIterationService.save(iteration);
                         return inlineReviewResponse; // Return the parsed response
