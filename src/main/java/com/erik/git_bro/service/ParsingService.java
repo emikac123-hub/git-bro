@@ -11,6 +11,7 @@ import java.util.stream.Collectors;
 
 import org.springframework.stereotype.Service;
 
+import com.erik.git_bro.model.Category;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
@@ -350,6 +351,21 @@ public class ParsingService {
         }
 
         return insideHunk ? hunkBuilder.toString().trim() : null;
+    }
+
+    public Category getIssueCategory(String feedback) {
+        if (feedback == null || feedback.isBlank()) {
+            return Category.NO_FEEDBACK;
+        }
+        feedback = feedback.toLowerCase();
+        if (feedback.contains("null pointer") || feedback.contains("security")) {
+            return Category.SECURITY;
+        } else if (feedback.contains("performance") || feedback.contains("race condition")) {
+            return Category.PERFORMANCE;
+        } else if (feedback.contains("naming") || feedback.contains("style")) {
+            return Category.STYLE;
+        }
+        return Category.GENERAL;
     }
 
 }

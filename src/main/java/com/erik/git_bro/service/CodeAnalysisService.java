@@ -65,8 +65,13 @@ public class CodeAnalysisService {
                         InlineReviewResponse inlineReviewResponse = objectMapper.readValue(cleanFeedback,
                                 InlineReviewResponse.class);
 
+                        if (inlineReviewResponse == null) {
+                            log.error("Parsed inlineReviewResponse is null for feedback: {}", cleanFeedback);
+                            throw new RuntimeException("Failed to parse AI feedback: inlineReviewResponse is null");
+                        }
+
                         for (Issue aiIssue : inlineReviewResponse.getIssues()) {
-                            Category issueCategory = getIssueCategory(aiIssue.getComment());
+                            Category issueCategory = this.parsingService.getIssueCategory(aiIssue.getComment());
                             BigDecimal severity = determineSeverity(issueCategory);
                             Integer lineNumber = aiIssue.getLine(); // AI should provide line number
 
@@ -126,20 +131,6 @@ public class CodeAnalysisService {
         }
     }
 
-    private Category getIssueCategory(String feedback) {
-        if (feedback == null || feedback.isBlank()) {
-            return Category.NO_FEEDBACK;
-        }
-        feedback = feedback.toLowerCase();
-        if (feedback.contains("null pointer") || feedback.contains("security")) {
-            return Category.SECURITY;
-        } else if (feedback.contains("performance") || feedback.contains("race condition")) {
-            return Category.PERFORMANCE;
-        } else if (feedback.contains("naming") || feedback.contains("style")) {
-            return Category.STYLE;
-        }
-        return Category.GENERAL;
-    }
 
     private BigDecimal determineSeverity(Category category) {
         return switch (category) {
