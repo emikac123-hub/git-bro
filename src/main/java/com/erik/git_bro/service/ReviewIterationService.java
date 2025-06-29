@@ -37,4 +37,9 @@ public class ReviewIterationService {
                 return reviewIterationRepository.save(newIteration);
             });
     }
+
+    @Transactional
+    public void save(ReviewIteration iteration) {
+        this.reviewIterationRepository.save(iteration);
+    }
 }
